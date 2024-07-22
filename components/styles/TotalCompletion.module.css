@@ -1,0 +1,49 @@
+/* components/TotalCompletion.module.css */
+.bgBox {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100px; /* Adjust height as needed */
+    background: #f0f0f0; /* Background color */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow effect */
+    padding: 10px;
+  }
+  
+  .totalCompletionNumber {
+    font-family: 'Roboto', sans-serif;
+    font-size: 3rem; /* Adjust font size as needed */
+    font-weight: bold;
+    color: #333; /* Text color */
+    text-align: center;
+    animation: fadeIn 1s ease-out; /* Simple fade-in animation */
+    font-family: "Lato", sans-serif;
+  }
+  #bigger{
+    font-size: 7rem;
+  }
+
+  #totalCompletionContainer2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px; /* Rounded corners */
+    /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);  */
+    padding: 10px;
+    /* border-radius: 2rem; */
+  }
+  @media( width< 800px){
+    #bigger{
+        font-size: 6rem;
+    }
+  }
+  /* Keyframes for fade-in effect */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
