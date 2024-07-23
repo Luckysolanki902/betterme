@@ -1,6 +1,6 @@
 // components/TotalCompletion.js
 import React from 'react';
-import styles from './styles/DailyCompletion.module.css'; // Import the CSS Module
+import styles from './styles/TotalCompletion.module.css'; // Import the CSS Module
 
 const DailyCompletion = ({ percentageProp }) => {
     const percentage = parseFloat(percentageProp) || 0;

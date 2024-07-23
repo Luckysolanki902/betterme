@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, Checkbox, Typography, Box } from '@mui/material';
 import { useSpring, animated } from 'react-spring';
-import { useRouter } from 'next/router';
 
 const Todos = ({ todos, completedTodos, handleToggleTodo }) => {
   const [localCompletedTodos, setLocalCompletedTodos] = useState(completedTodos || []);
-  const router = useRouter();
   const props = useSpring({ opacity: 1, from: { opacity: 0 }, config: { duration: 500 } });
 
   // Sort todos: unchecked todos appear before checked todos

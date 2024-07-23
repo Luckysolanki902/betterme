@@ -15,7 +15,7 @@ const quotes = [
   "Consistency is what transforms average into excellence."
 ];
 
-const startDate = new Date('2024-07-22');
+const startDate = new Date('2024-07-23');
 
 const Home = () => {
   const [todos, setTodos] = useState([]);
@@ -75,9 +75,7 @@ const Home = () => {
     <Container className={styles.homeContainer} maxWidth="md" >
       <Box sx={{ mb: 4 }}>
         <TotalCompletion percentageProp={totalCompletion} datestring={dateString}  />
-        <Typography className='pop' variant="h5" component="h2" gutterBottom>
           <Quote text={quote} />
-        </Typography>
         <Box>
         <DailyCompletion percentageProp={dailyPercentage}/>
 
