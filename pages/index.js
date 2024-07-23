@@ -9,10 +9,7 @@ import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
 
 const quotes = [
-  "Success is the sum of small efforts, repeated day in and day out.",
-  "A little progress each day adds up to big results.",
-  "The journey of a thousand miles begins with one step.",
-  "Consistency is what transforms average into excellence."
+  "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
 ];
 
 const startDate = new Date('2024-07-23');
