@@ -86,7 +86,7 @@ const AdminPanel = () => {
           fullWidth
           required       
           margin="normal"
-          InputProps={{ inputProps: { min: 0, max: 100, step:0.05 } }}
+          InputProps={{ inputProps: { min: 0, max: 1, step:0.01 } }}
         />
         <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
           {isEditing ? 'Update' : 'Add'} Todo
