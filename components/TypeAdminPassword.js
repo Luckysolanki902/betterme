@@ -55,7 +55,7 @@ const TypeAdminPassword = ({ onLogin }) => {
             <CssBaseline />
 
             <div style={{ padding: '2rem', width: '100%', height: 'auto', overflow:'auto' }}>
-                <div className={styles.maddyCustom} style={{ margin: '0' }}>Maddy Custom</div>
+                <div className={styles.maddyCustom} style={{ margin: '0' }}>BetterMe</div>
                 <div className={styles.adminPanel} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: 'auto', marginTop: '3rem', marginBottom: '4rem' }}>
                     <h1 className={styles.heading}>Greetings, Admin</h1>
                     <p className={styles.description}>Begin managing stickers seamlessly!</p>
