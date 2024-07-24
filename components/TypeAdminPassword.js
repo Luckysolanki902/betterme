@@ -1,119 +1,112 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { TextField, Button, IconButton, InputAdornment } from '@mui/material';
-import styles from '@/components/styles/admin.module.css'
+// pages/PasswordPage.js
+import React, { useState } from 'react';
+import { TextField, Button, IconButton, InputAdornment, Typography, Snackbar, CircularProgress } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
-const darkTheme = createTheme({
-    palette: {
-        mode: 'dark',
-    },
-});
+import { useForm, Controller } from 'react-hook-form';
+import MuiAlert from '@mui/material/Alert';
 
-const TypeAdminPassword = ({ onLogin }) => {
-    const [password1, setPassword1] = useState('');
-    const [password2, setPassword2] = useState('');
-    const [showPassword1, setShowPassword1] = useState(false);
-    const [showPassword2, setShowPassword2] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
-    const router = useRouter();
+const PasswordPage = () => {
+    const { handleSubmit, control, setError, formState: { errors } } = useForm();
+    const [showPassword, setShowPassword] = useState(false);
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = async (event) => {
+
+    const handleClickShowPassword = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const handleMouseDownPassword = (event) => {
         event.preventDefault();
+    };
+
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false);
+    };
+
+    const onSubmit = async (data) => {
         try {
+            setIsLoading(true)
             const response = await fetch('/api/security/authenticate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ password1, password2 }),
+                body: JSON.stringify({ password: data.password }),
             });
+            const result = await response.json();
 
-            const data = await response.json();
-            if (data.success) {
-                const { token } = data;
-                console.log(token)
-                localStorage.setItem('adminAuthToken', token);
-                console.log('Logged in successfully');
-                onLogin(); // Invoke the login function passed as a prop
+            if (result.success) {
+                localStorage.setItem('sessionId', result.token);
+                setSnackbarMessage('Login successful!');
+                setOpenSnackbar(true);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
-                setErrorMessage(data.message || 'Error granting admin access.');
+                setError('password', { type: 'manual', message: 'Incorrect password!' });
             }
         } catch (error) {
-            console.error('Error validating password:', error);
+            console.log(error)
+        } finally {
+            setIsLoading(false)
         }
-    };
-    const toggleShowPassword = (field) => {
-        if (field === 'password1') {
-            setShowPassword1(!showPassword1);
-        } else {
-            setShowPassword2(!showPassword2);
-        }
-    };
-    return (
-        <ThemeProvider theme={darkTheme}>
-            <CssBaseline />
 
-            <div style={{ padding: '2rem', width: '100%', height: 'auto', overflow:'auto' }}>
-                <div className={styles.maddyCustom} style={{ margin: '0' }}>Maddy Custom</div>
-                <div className={styles.adminPanel} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: 'auto', marginTop: '3rem', marginBottom: '4rem' }}>
-                    <h1 className={styles.heading}>Greetings, Admin</h1>
-                    <p className={styles.description}>Begin managing stickers seamlessly!</p>
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', marginBottom: '4rem', width: '30%', minWidth: '215px', }}>
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20vh', padding: '20px' }}>
+            <Typography variant="h4" gutterBottom>BetterMe</Typography>
+            <form onSubmit={handleSubmit(onSubmit)} style={{ width: '100%', maxWidth: '400px' }}>
+                <Controller
+                    name="password"
+                    control={control}
+                    defaultValue=""
+                    rules={{ required: 'Password is required' }}
+                    render={({ field }) => (
                         <TextField
-                            label="Password 1"
-                            type={showPassword1 ? 'text' : 'password'}
-                            value={password1}
-                            onChange={(e) => setPassword1(e.target.value)}
+                            {...field}
+                            type={showPassword ? 'text' : 'password'}
+                            label="Password"
+                            variant="outlined"
                             fullWidth
-                            margin="normal"
+                            error={!!errors.password}
+                            helperText={errors.password ? errors.password.message : ''}
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
-                                        <IconButton onClick={() => toggleShowPassword('password1')} edge="end">
-                                            {showPassword1 ? <VisibilityOff /> : <Visibility />}
+                                        <IconButton
+                                            aria-label="toggle password visibility"
+                                            onClick={handleClickShowPassword}
+                                            onMouseDown={handleMouseDownPassword}
+                                        >
+                                            {showPassword ? <Visibility /> : <VisibilityOff />}
                                         </IconButton>
                                     </InputAdornment>
                                 ),
                             }}
+                            style={{ marginTop: '20px' }}
                         />
-                        <TextField
-                            label="Password 2"
-                            type={showPassword2 ? 'text' : 'password'}
-                            value={password2}
-                            onChange={(e) => setPassword2(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton onClick={() => toggleShowPassword('password2')} edge="end">
-                                            {showPassword2 ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        {errorMessage && <p>{errorMessage}</p>}
-                        <Button variant="contained" color="primary" type="submit" sx={{ marginTop: '2rem', width: '90%', backgroundColor: 'white', color: 'black' }}>
-                            Submit
-                        </Button>
-                    </form>
-                </div>
-                <style>
-                    {`
-              html, body {
-                background-color: #1a1a1a;
-                color: #f0f0f0;
-                font-family: Jost, sans-serif;
-                margin: 0;
-                height: 100%;
-              }
-              `}
-                </style>
-            </div>
-        </ThemeProvider>
+                    )}
+                />
+                <Button
+                    variant="contained"
+                    color="primary"
+                    type="submit"
+                    fullWidth
+                    style={{ marginTop: '20px' }}
+                >
+                    {isLoading ? <CircularProgress sx={{ color: 'white' }} size={24} /> : 'Verify'}
+                </Button>
+            </form>
+            <Snackbar open={openSnackbar} autoHideDuration={3000} onClose={handleCloseSnackbar}>
+                <MuiAlert onClose={handleCloseSnackbar} severity={errors.password ? 'error' : 'success'}>
+                    {errors.password ? errors.password.message : snackbarMessage}
+                </MuiAlert>
+            </Snackbar>
+        </div>
     );
 };
 
-export default TypeAdminPassword;
+export default PasswordPage;
