@@ -80,7 +80,7 @@ const Home = () => {
       <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo}  />
       </Box>
       <Button  variant="contained" color="primary" fullWidth sx={{marginTop:'2rem'}} onClick={() => router.push('/admin')}>
-        Add More or Edit
+        Admin Panel
       </Button>
     </Container>
   );
