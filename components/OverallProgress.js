@@ -83,11 +83,11 @@ const OverallProgress = () => {
 
   return (
     <Container maxWidth="lg">
-      <Typography  className='pop'  variant="h4" sx={{ marginBottom: '2rem' }}>
+      <Typography  className='pop'  variant="h4" sx={{ marginBottom: '1rem' }}>
         Overall Progress
       </Typography>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+        <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
           <XAxis dataKey="date" tick={{ fontSize: '12px' }} tickFormatter={formatXAxis} />
           <YAxis
