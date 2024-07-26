@@ -5,6 +5,7 @@ import { useState } from 'react';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LocalFireDepartmentRoundedIcon from '@mui/icons-material/LocalFireDepartmentRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
+import TmelineIcon from '@mui/icons-material/Timeline';
 const Dashboard = ({ currentPage }) => {
     const router = useRouter();
 
@@ -47,7 +48,7 @@ const Dashboard = ({ currentPage }) => {
                     <Card>
                         <CardActionArea onClick={() => handleCardClick('/progress')}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <LocalFireDepartmentRoundedIcon color='gray' sx={{ color: 'gray' }} />
+                                <TmelineIcon color='gray' sx={{ color: 'gray' }} />
                                 <Typography variant="h6">Progress</Typography>
                             </CardContent>
                         </CardActionArea>
