@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Typography, Box, Button } from '@mui/material';
+import { Container, Typography, Box } from '@mui/material';
 import { differenceInDays } from 'date-fns';
 import Quote from '../components/Quote';
 import TotalCompletion from '../components/TotalCompletion';
@@ -7,7 +7,6 @@ import Todos from '../components/Todos';
 import styles from '../styles/Home.module.css';
 import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
-import { Card, CardContent, CardActionArea, Grid, Breadcrumbs, Link as MuiLink } from '@mui/material';
 import Dashboard from '@/components/Dashboard';
 
 const quotes = [
@@ -22,7 +21,9 @@ const Home = () => {
   const [dailyPercentage, setDailyPercentage] = useState(0);
   const [quote, setQuote] = useState('');
   const [totalCompletion, setTotalCompletion] = useState(0);
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const router = useRouter();
+
   useEffect(() => {
     fetchTodos();
     fetchDailyCompletion();
@@ -31,9 +32,11 @@ const Home = () => {
   }, []);
 
   const fetchTodos = async () => {
+    setIsLoading(true);
     const res = await fetch('/api/todos');
     const data = await res.json();
     setTodos(data);
+    setIsLoading(false);
   };
 
   const fetchDailyCompletion = async () => {
@@ -71,19 +74,16 @@ const Home = () => {
   const dateString = `Day ${dayCount}`;
 
   return (
-    <Container className={styles.homeContainer} maxWidth="md" >
+    <Container className={styles.homeContainer} maxWidth="md">
       <Box sx={{ mb: 4 }}>
         <TotalCompletion percentageProp={totalCompletion} datestring={dateString} />
         <Quote text={quote} />
         <Box>
           <DailyCompletion percentageProp={dailyPercentage} />
-
         </Box>
-        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} />
+        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} isLoading={true} />
       </Box>
-
-
-      <Dashboard currentPage={'home'}/>
+      <Dashboard currentPage={'home'} />
     </Container>
   );
 };

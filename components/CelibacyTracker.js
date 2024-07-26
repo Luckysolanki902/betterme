@@ -14,6 +14,25 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import Dashboard from './Dashboard';
 import styles from '@/styles/Home.module.css'
 
+const getMonthName = (num) => {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return months[num - 1];
+}
+
+function formatDate(date) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Today';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  } else {
+    return date.toDateString();
+  }
+}
+
 const CelibacyTracker = ({ year, month }) => {
   const [dailyRecords, setDailyRecords] = useState([]);
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
@@ -21,6 +40,7 @@ const CelibacyTracker = ({ year, month }) => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // 'success' or 'error'
   const [headingDate, setHeadingDate] = useState(new Date(year, month - 1, new Date().getDate()));
+  const today = new Date(year, month - 1, new Date().getDate());
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -82,47 +102,75 @@ const CelibacyTracker = ({ year, month }) => {
   const daysInMonth = new Date(year, month, 0).getDate();
 
   const handleDayClick = (day) => {
-    setSelectedDay(day);
-    setHeadingDate(new Date(year, month - 1, day));
+    const selectedDate = new Date(year, month - 1, day);
+    if (selectedDate <= today) {
+      setSelectedDay(day);
+      setHeadingDate(selectedDate);
+    }
   };
 
   return (
     <Container className={styles.homeContainer} maxWidth="md">
       <Box sx={{ padding: 2, fontFamily: 'Arial, sans-serif' }}>
-        <Typography variant="h4" gutterBottom sx={{ marginBottom: '2rem' }}>
-          Celibacy Tracker for {month}/{year}
+        <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem' }}>
+          {getMonthName(month)}
         </Typography>
-        <Grid container spacing={2}>
-          {Array.from({ length: daysInMonth }).map((_, index) => (
-            <Grid item xs={1.5} sm={1.5} md={1.5} lg={1.5} key={index}>
-              <Box
-                onClick={() => handleDayClick(index + 1)}
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  margin: 'auto',
+        <Grid container spacing={2}> {/* Adjust spacing if needed */}
+          {Array.from({ length: daysInMonth }).map((_, index) => {
+            const day = index + 1;
+            const isFutureDate = new Date(year, month - 1, day) > today;
+            return (
+              <Grid 
+                item 
+                xs={2} 
+                sm={2} 
+                md={2} 
+                lg={2} 
+                key={index}
+                sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center' 
                 }}
               >
-                <LocalFireDepartmentIcon
+                <Box
+                  onClick={() => !isFutureDate && handleDayClick(day)}
                   sx={{
-                    color: getColorForIcon(index + 1),
-                    fontSize: '2rem',
+                    width: 60,
+                    height: 60,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isFutureDate ? 'not-allowed' : 'pointer',
+                    opacity: isFutureDate ? 0.5 : 1,
+                    boxShadow: selectedDay === day ? '0px 4px 8px rgba(0, 0, 0, 0.3)' : 'none',
                   }}
-                />
-              </Box>
-            </Grid>
-          ))}
+                >
+                  {getColorForIcon(day) !== 'grey' ? (
+                    <LocalFireDepartmentIcon
+                      sx={{
+                        color: getColorForIcon(day),
+                        fontSize: '2rem',
+                      }}
+                    />
+                  ) : (
+                    <Typography className='pop' variant="body1" sx={{ textAlign: 'center' }}>
+                      {day}
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+            );
+          })}
         </Grid>
-        <Typography variant="h5" gutterBottom sx={{ marginTop: '4rem', marginBottom: '2rem' }}>
-          {`Selected Day: ${headingDate.toDateString()}`}
+        <Typography className='pop' variant="h5" gutterBottom sx={{ marginTop: '4rem', marginBottom: '2rem' }}>
+          {formatDate(headingDate)}
         </Typography>
-        <Box sx={{ marginBottom: 2, display: 'flex', flexDirection: 'column', alignItems: 'start' }}>
+        <Box sx={{ marginBottom: 2, display: 'flex', flexDirection: 'column', alignItems: 'start', fontFamily:'Poppins' }}>
           <FormControlLabel
+              className='pop'
+
             control={
               <Checkbox
                 checked={dailyRecords[selectedDay - 1]?.celibacy || false}
@@ -136,7 +184,9 @@ const CelibacyTracker = ({ year, month }) => {
             }
             label="Celibacy"
           />
-          <FormControlLabel
+          <FormControlLabel 
+              className='pop'
+
             control={
               <Checkbox
                 checked={dailyRecords[selectedDay - 1]?.NotFallInTrap || false}
@@ -151,6 +201,7 @@ const CelibacyTracker = ({ year, month }) => {
             label="Didn't Fall In Trappy Thoughts"
           />
           <FormControlLabel
+              className='pop'
             control={
               <Checkbox
                 checked={dailyRecords[selectedDay - 1]?.notSearchForLustfulContent || false}

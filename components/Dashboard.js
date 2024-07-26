@@ -15,7 +15,7 @@ const Dashboard = ({ currentPage }) => {
 
     return (
         <>
-        <Typography variant='h4' sx={{marginTop:'4rem', marginBottom:'2rem'}} >Dashboard</Typography>
+        <Typography className='pop' variant='h4' sx={{marginTop:'4rem', marginBottom:'2rem'}} >Dashboard</Typography>
             {/* Main content with cards */}
             <Grid container spacing={3}>
 
@@ -25,7 +25,7 @@ const Dashboard = ({ currentPage }) => {
                         <CardActionArea onClick={() => handleCardClick('/')}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <HomeRoundedIcon color='gray' sx={{ color: 'gray' }} />
-                                <Typography variant="h6">Home</Typography>
+                                <Typography className='lato'  variant="h6">Home</Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
@@ -37,7 +37,7 @@ const Dashboard = ({ currentPage }) => {
                         <CardActionArea onClick={() => handleCardClick('/celibacy')}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <LocalFireDepartmentRoundedIcon color='gray' sx={{ color: 'gray' }} />
-                                <Typography variant="h6">Celibacy Tracker</Typography>
+                                <Typography className='lato' variant="h6">Celibacy Tracker</Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
@@ -49,7 +49,7 @@ const Dashboard = ({ currentPage }) => {
                         <CardActionArea onClick={() => handleCardClick('/progress')}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <TmelineIcon color='gray' sx={{ color: 'gray' }} />
-                                <Typography variant="h6">Progress</Typography>
+                                <Typography className='lato' variant="h6">Progress</Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
@@ -62,7 +62,7 @@ const Dashboard = ({ currentPage }) => {
                         <CardActionArea onClick={() => handleCardClick('/modify')}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <AdminPanelSettingsRoundedIcon color='gray' sx={{ color: 'gray' }} />
-                                <Typography variant="h6">Modify</Typography>
+                                <Typography className='lato' variant="h6">Modify Todos</Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>

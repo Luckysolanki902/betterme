@@ -72,7 +72,7 @@ const CompletionCounts = () => {
 
   return (
     <Box sx={{ padding: 2 }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography className='pop' variant="h4" gutterBottom>
         Todo Completion Counts
       </Typography>
       <Button
