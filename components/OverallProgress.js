@@ -36,7 +36,7 @@ const OverallProgress = () => {
   if (loading) {
     return (
       <Box sx={{ padding: 2 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography  className='pop'  variant="h4" gutterBottom>
           Overall Progress
         </Typography>
         <Container
@@ -83,7 +83,7 @@ const OverallProgress = () => {
 
   return (
     <Container maxWidth="lg">
-      <Typography variant="h4" sx={{ marginBottom: '2rem' }}>
+      <Typography  className='pop'  variant="h4" sx={{ marginBottom: '2rem' }}>
         Overall Progress
       </Typography>
       <ResponsiveContainer width="100%" height={300}>
