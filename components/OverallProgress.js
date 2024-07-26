@@ -57,7 +57,7 @@ const OverallProgress = () => {
   if (error) {
     return (
       <Box sx={{ padding: 2 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography className='pop' variant="h4" gutterBottom>
           Overall Progress
         </Typography>
         <Container
