@@ -1,10 +1,25 @@
 // pages/admin/index.js
-import { Container, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
-import Link from 'next/link';
+import { Container, Typography, Card, CardContent, CardActionArea, Grid, Breadcrumbs, Link as MuiLink } from '@mui/material';
+import { useRouter } from 'next/router';
+import { useState } from 'react';
 
 const AdminDashboard = () => {
+  const router = useRouter();
+  
+  const handleCardClick = (path) => {
+    router.push(path);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
+      {/* Breadcrumbs */}
+      <Breadcrumbs aria-label="breadcrumb">
+        <MuiLink sx={{textDecoration:'none', cursor: 'pointer'}} color="inherit" onClick={() => router.push('/')}>
+          BetterMe
+        </MuiLink>
+        <Typography color="textPrimary">Admin</Typography>
+      </Breadcrumbs>
+
       {/* Header */}
       <Typography variant="h4" component="h1" gutterBottom>
         Admin Panel
@@ -14,8 +29,8 @@ const AdminDashboard = () => {
       <Grid container spacing={3}>
         {/* Modify Card */}
         <Grid item xs={12} sm={6}>
-          <Card >
-            <CardActionArea component={Link} href="/admin/modify">
+          <Card>
+            <CardActionArea onClick={() => handleCardClick('/admin/modify')}>
               <CardContent>
                 <Typography variant="h6">Modify</Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -28,8 +43,8 @@ const AdminDashboard = () => {
 
         {/* Progress Card */}
         <Grid item xs={12} sm={6}>
-          <Card >
-            <CardActionArea component={Link} href="/admin/progress">
+          <Card>
+            <CardActionArea onClick={() => handleCardClick('/admin/progress')}>
               <CardContent>
                 <Typography variant="h6">Progress</Typography>
                 <Typography variant="body2" color="text.secondary">

@@ -4,6 +4,7 @@ import { Home as HomeIcon, AdminPanelSettings as AdminPanelSettingsIcon } from '
 import OverallProgress from '@/components/OverallProgress';
 import WeeklyProgressChart from '@/components/WeeklyProgress';
 import { useRouter } from 'next/router';
+import CompletionCounts from '@/components/CompletionCounts';
 
 const Progress = () => {
   const router = useRouter();
@@ -20,12 +21,11 @@ const Progress = () => {
         </Link>
         <Typography color="textPrimary">Progress</Typography>
       </Breadcrumbs>
-
-      <div style={{ marginBottom: '4rem', marginTop: '4rem' }}>
-        <WeeklyProgressChart />
-      </div>
       <div style={{ marginBottom: '4rem' }}>
         <OverallProgress />
+      </div>
+      <div style={{ marginBottom: '4rem' }}>
+        <CompletionCounts/>
       </div>
     </Container>
   );

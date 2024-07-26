@@ -1,13 +1,12 @@
-// components/OverallProgress.js
-
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { Container, Typography, Paper, CircularProgress } from '@mui/material';
+import { Container, Typography, Paper, CircularProgress, useTheme, Box } from '@mui/material';
 
 const OverallProgress = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const theme = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -27,10 +26,17 @@ const OverallProgress = () => {
 
   if (loading) {
     return (
-      <Container>
-        <Paper style={{ padding: 16, textAlign: 'center' }}>
-          <CircularProgress />
-          <Typography variant="h6" style={{ marginTop: 16 }}>
+      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Paper sx={{
+          padding: theme.spacing(3),
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <CircularProgress color="primary" />
+          <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
             Loading...
           </Typography>
         </Paper>
@@ -40,8 +46,15 @@ const OverallProgress = () => {
 
   if (error) {
     return (
-      <Container>
-        <Paper style={{ padding: 16, textAlign: 'center' }}>
+      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Paper sx={{
+          padding: theme.spacing(3),
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
           <Typography variant="h6" color="error">
             {error}
           </Typography>
@@ -51,21 +64,31 @@ const OverallProgress = () => {
   }
 
   return (
-    <Container>
-      <Paper style={{ padding: 16 }}>
-        <Typography variant="h5" gutterBottom>
+    <Container maxWidth="lg">
+
+        <Typography variant="h4" gutterBottom>
           Overall Progress
         </Typography>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis domain={[0, 1]} />
-            <Tooltip />
-            <Line type="monotone" dataKey="percentage" stroke="#8884d8" dot={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+            <XAxis dataKey="date" tick={{ fontSize: '12px' }} />
+            <YAxis
+              domain={[0, 2]}
+              tickFormatter={(value) => `${value}%`}
+              tick={{ fontSize: '12px' }}
+            />
+            <Tooltip formatter={(value) => `${value}%`} />
+            <Line
+              type="monotone"
+              dataKey="percentage"
+              stroke={theme.palette.primary.main}
+              dot={{ stroke: theme.palette.primary.main, strokeWidth: 2 }}
+              strokeWidth={2}
+            />
           </LineChart>
         </ResponsiveContainer>
-      </Paper>
+ 
     </Container>
   );
 };
