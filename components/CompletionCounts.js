@@ -12,9 +12,10 @@ import {
   CircularProgress,
   Grid,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Container
 } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from 'recharts';
 import axios from 'axios';
 
 const CompletionCounts = () => {
@@ -115,17 +116,20 @@ const CompletionCounts = () => {
         </DialogActions>
       </Dialog>
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-          <CircularProgress />
-        </Box>
+      {(loading) ? (
+      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
+        Loading...
+      </Typography>
+
+  </Container>
       ) : (
-        <div >
+        <div style={{display:'flex', justifyContent:'center'}}>
 <BarChart
-  width={isSmallScreen ? 300 : 800}
+  width={isSmallScreen ? 350 : 800}
   height={isSmallScreen ? 300 : 400}
   data={filteredData}
-  margin={{ top: 20, right: 30, bottom: 80, left: 20 }} // Increased bottom margin for rotated labels
+  margin={{ top: 20, right: 20, bottom: 20, left: -20 }} // Increased bottom margin for rotated labels
 >
   <CartesianGrid strokeDasharray="3 3" />
   <XAxis
@@ -140,7 +144,6 @@ const CompletionCounts = () => {
     tickCount={Math.max(5, Math.ceil(Math.max(...filteredData.map(item => item.completionCount)) / 5))} // Ensure enough ticks to display integers
   />
   <Tooltip />
-  <Legend verticalAlign="top" wrapperStyle={{ lineHeight: '40px' }} />
   <Bar dataKey="completionCount" fill="#8884d8">
     <LabelList dataKey="completionCount" position="top" />
   </Bar>

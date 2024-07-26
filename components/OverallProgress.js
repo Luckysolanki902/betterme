@@ -26,50 +26,42 @@ const OverallProgress = () => {
 
   if (loading) {
     return (
+      <Box sx={{ padding: 2 }}>
+      <Typography variant="h4" gutterBottom>
+        Overall Progress
+      </Typography>
       <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <Paper sx={{
-          padding: theme.spacing(3),
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <CircularProgress color="primary" />
-          <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
+          <Typography variant="h6" >
             Loading...
           </Typography>
-        </Paper>
+
       </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
+      <Box sx={{ padding: 2 }}>
+      <Typography variant="h4" gutterBottom>
+        Overall Progress
+      </Typography>
       <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <Paper sx={{
-          padding: theme.spacing(3),
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <Typography variant="h6" color="error">
-            {error}
+          <Typography  variant="h6" >
+            Some Error Occured
           </Typography>
-        </Paper>
+
       </Container>
+      </Box>
     );
   }
 
   return (
     <Container maxWidth="lg">
-
-        <Typography variant="h4" gutterBottom>
-          Overall Progress
-        </Typography>
-        <ResponsiveContainer width="100%" height={400}>
+            <Typography variant="h4" sx={{marginBottom:'2rem'}}>
+        Overall Progress
+      </Typography>
+        <ResponsiveContainer width="100%" height={300} >
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
             <XAxis dataKey="date" tick={{ fontSize: '12px' }} />

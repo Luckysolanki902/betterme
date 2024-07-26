@@ -7,6 +7,8 @@ import Todos from '../components/Todos';
 import styles from '../styles/Home.module.css';
 import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
+import { Card, CardContent, CardActionArea, Grid, Breadcrumbs, Link as MuiLink } from '@mui/material';
+import Dashboard from '@/components/Dashboard';
 
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
@@ -71,17 +73,17 @@ const Home = () => {
   return (
     <Container className={styles.homeContainer} maxWidth="md" >
       <Box sx={{ mb: 4 }}>
-        <TotalCompletion percentageProp={totalCompletion} datestring={dateString}  />
-          <Quote text={quote} />
+        <TotalCompletion percentageProp={totalCompletion} datestring={dateString} />
+        <Quote text={quote} />
         <Box>
-        <DailyCompletion percentageProp={dailyPercentage}/>
+          <DailyCompletion percentageProp={dailyPercentage} />
 
-         </Box>
-      <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo}  />
+        </Box>
+        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} />
       </Box>
-      <Button  variant="contained" color="primary" fullWidth sx={{marginTop:'2rem'}} onClick={() => router.push('/admin')}>
-        Admin Panel
-      </Button>
+
+
+      <Dashboard currentPage={'home'}/>
     </Container>
   );
 };

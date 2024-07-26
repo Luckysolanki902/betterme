@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, TextField, Button, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Breadcrumbs, Link } from '@mui/material';
-import { Edit, Delete, Cancel, Home as HomeIcon, AdminPanelSettings as AdminPanelSettingsIcon } from '@mui/icons-material';
+import { Edit, Delete} from '@mui/icons-material';
 import { useRouter } from 'next/router';
-
+import Dashboard from '@/components/Dashboard';
 const AdminPanel = () => {
   const [todos, setTodos] = useState([]);
   const [form, setForm] = useState({ title: '', percentage: 0 });
@@ -88,20 +88,7 @@ const AdminPanel = () => {
 
   return (
     <Container maxWidth="md">
-      {/* Breadcrumbs */}
-      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3,}}>
-        <Link  sx={{textDecoration:'none'}}  color="inherit" href="/" onClick={(e) => { e.preventDefault(); router.push('/'); }}>
-          BetterMe
-        </Link>
-        <Link sx={{textDecoration:'none'}}   color="inherit" href="/admin" onClick={(e) => { e.preventDefault(); router.push('/admin'); }}>
-          Admin
-        </Link>
-        <Typography color="textPrimary">Modify</Typography>
-      </Breadcrumbs>
 
-      <Typography variant="h4" component="h1" gutterBottom>
-        Admin Panel
-      </Typography>
 
       <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3 }}>
         <TextField
@@ -188,6 +175,7 @@ const AdminPanel = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dashboard currentPage={'modify'}/>
     </Container>
   );
 };
