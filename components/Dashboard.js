@@ -17,7 +17,7 @@ const Dashboard = ({ currentPage }) => {
         <>
         <Typography className='pop' variant='h4' sx={{marginTop:'4rem', marginBottom:'2rem'}} >Dashboard</Typography>
             {/* Main content with cards */}
-            <Grid container spacing={3}>
+            <Grid container spacing={3} sx={{marginBottom:'1rem'}}>
 
 
                 {currentPage != 'home' && <Grid item xs={12} sm={6}>
