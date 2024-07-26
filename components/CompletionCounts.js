@@ -70,6 +70,10 @@ const CompletionCounts = () => {
 
   const filteredData = data.filter(item => selectedTodos.includes(item.id));
 
+  // Calculate the max value in the filtered data to determine the domain
+  const maxCompletionCount = Math.max(...filteredData.map(item => item.completionCount), 0);
+  const yAxisDomain = [0, Math.ceil(maxCompletionCount / 10) * 10]; // Make the max value a multiple of 10
+
   return (
     <Box sx={{ padding: 2 }}>
       <Typography className='pop' variant="h4" gutterBottom>
@@ -116,39 +120,37 @@ const CompletionCounts = () => {
         </DialogActions>
       </Dialog>
 
-      {(loading) ? (
-      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-      <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
-        Loading...
-      </Typography>
-
-  </Container>
+      {loading ? (
+        <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
+            Loading...
+          </Typography>
+        </Container>
       ) : (
-        <div style={{display:'flex', justifyContent:'center'}}>
-<BarChart
-  width={isSmallScreen ? 350 : 800}
-  height={isSmallScreen ? 300 : 400}
-  data={filteredData}
-  margin={{ top: 20, right: 20, bottom: 20, left: -20 }} // Increased bottom margin for rotated labels
->
-  <CartesianGrid strokeDasharray="3 3" />
-  <XAxis
-    dataKey="title"
-    angle={-45} // Rotate labels
-    textAnchor="end" // Align rotated labels to end
-    style={{ fontSize: '12px' }} // Adjust font size if needed
-  />
-  <YAxis
-    tickFormatter={(tick) => tick} // Display integer values directly
-    domain={[0, 'auto']} // Automatically adjust the maximum value
-    tickCount={Math.max(5, Math.ceil(Math.max(...filteredData.map(item => item.completionCount)) / 5))} // Ensure enough ticks to display integers
-  />
-  <Tooltip />
-  <Bar dataKey="completionCount" fill="#8884d8">
-    <LabelList dataKey="completionCount" position="top" />
-  </Bar>
-</BarChart>
-
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <BarChart
+            width={isSmallScreen ? 350 : 800}
+            height={isSmallScreen ? 300 : 400}
+            data={filteredData}
+            margin={{ top: 20, right: 20, bottom: 20, left: -20 }} // Increased bottom margin for rotated labels
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="title"
+              angle={-45} // Rotate labels
+              textAnchor="end" // Align rotated labels to end
+              style={{ fontSize: '12px' }} // Adjust font size if needed
+            />
+            <YAxis
+              tickFormatter={(tick) => tick} // Display integer values directly
+              domain={yAxisDomain} // Set domain to multiples of 10
+              tickCount={Math.max(5, Math.ceil(maxCompletionCount / 10) + 1)} // Ensure enough ticks to display integers
+            />
+            <Tooltip />
+            <Bar dataKey="completionCount" fill="#8884d8">
+              <LabelList dataKey="completionCount" position="top" />
+            </Bar>
+          </BarChart>
         </div>
       )}
     </Box>

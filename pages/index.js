@@ -8,6 +8,7 @@ import styles from '../styles/Home.module.css';
 import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
 import Dashboard from '@/components/Dashboard';
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
@@ -81,7 +82,7 @@ const Home = () => {
         <Box>
           <DailyCompletion percentageProp={dailyPercentage} />
         </Box>
-        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} isLoading={true} />
+        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} isLoading={isLoading} />
       </Box>
       <Dashboard currentPage={'home'} />
     </Container>

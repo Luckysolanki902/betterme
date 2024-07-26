@@ -8,11 +8,16 @@ import {
   Typography,
   Snackbar,
   Alert,
-  Container
+  Container,
+  useMediaQuery
 } from '@mui/material';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import Dashboard from './Dashboard';
 import styles from '@/styles/Home.module.css'
+import { differenceInDays } from 'date-fns';
+
+
+
 
 const getMonthName = (num) => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -33,6 +38,8 @@ function formatDate(date) {
   }
 }
 
+const startDate = new Date('2024-07-23');
+
 const CelibacyTracker = ({ year, month }) => {
   const [dailyRecords, setDailyRecords] = useState([]);
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
@@ -41,7 +48,7 @@ const CelibacyTracker = ({ year, month }) => {
   const [snackbarSeverity, setSnackbarSeverity] = useState('success'); // 'success' or 'error'
   const [headingDate, setHeadingDate] = useState(new Date(year, month - 1, new Date().getDate()));
   const today = new Date(year, month - 1, new Date().getDate());
-
+  const isSmallScreen = useMediaQuery('(max-width: 600px)');
   useEffect(() => {
     const fetchRecords = async () => {
       try {
@@ -109,28 +116,39 @@ const CelibacyTracker = ({ year, month }) => {
     }
   };
 
+  const todayD = new Date();
+  const dayCount = differenceInDays(todayD, startDate) + 1;
+
   return (
     <Container className={styles.homeContainer} maxWidth="md">
       <Box sx={{ padding: 2, fontFamily: 'Arial, sans-serif' }}>
-        <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem' }}>
-          {getMonthName(month)}
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
+
+          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem' }}>
+            {getMonthName(month)}
+          </Typography>
+
+          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display:'flex', alignItems:'center' }}>
+            <LocalFireDepartmentIcon sx={{fontSize:'3rem', color:'#f57f17'}} />
+            {dayCount}
+          </Typography>
+        </Box>
         <Grid container spacing={2}> {/* Adjust spacing if needed */}
           {Array.from({ length: daysInMonth }).map((_, index) => {
             const day = index + 1;
             const isFutureDate = new Date(year, month - 1, day) > today;
             return (
-              <Grid 
-                item 
-                xs={2} 
-                sm={2} 
-                md={2} 
-                lg={2} 
+              <Grid
+                item
+                xs={2}
+                sm={2}
+                md={2}
+                lg={2}
                 key={index}
-                sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center' 
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
                 }}
               >
                 <Box
@@ -167,9 +185,9 @@ const CelibacyTracker = ({ year, month }) => {
         <Typography className='pop' variant="h5" gutterBottom sx={{ marginTop: '4rem', marginBottom: '2rem' }}>
           {formatDate(headingDate)}
         </Typography>
-        <Box sx={{ marginBottom: 2, display: 'flex', flexDirection: 'column', alignItems: 'start', fontFamily:'Poppins' }}>
+        <Box sx={{ marginBottom: 2, display: 'flex', flexDirection: 'column', alignItems: 'start', fontFamily: 'Poppins' }}>
           <FormControlLabel
-              className='pop'
+            className='pop'
 
             control={
               <Checkbox
@@ -184,8 +202,8 @@ const CelibacyTracker = ({ year, month }) => {
             }
             label="Celibacy"
           />
-          <FormControlLabel 
-              className='pop'
+          <FormControlLabel
+            className='pop'
 
             control={
               <Checkbox
@@ -201,7 +219,7 @@ const CelibacyTracker = ({ year, month }) => {
             label="Didn't Fall In Trappy Thoughts"
           />
           <FormControlLabel
-              className='pop'
+            className='pop'
             control={
               <Checkbox
                 checked={dailyRecords[selectedDay - 1]?.notSearchForLustfulContent || false}

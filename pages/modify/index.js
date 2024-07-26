@@ -134,7 +134,7 @@ const AdminPanel = () => {
       </Box>
 
       <List sx={{ maxHeight: '23rem', overflow: 'auto' }}>
-        {(isLoading || !isLoading)? (
+        {(isLoading)? (
           Array.from({ length: 20 }).map((_, index) => (
             <ListItem key={index} divider>
               <ListItemText
