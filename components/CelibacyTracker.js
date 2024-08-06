@@ -38,7 +38,7 @@ function formatDate(date) {
   }
 }
 
-const startDate = new Date('2024-07-23');
+const startDate = new Date('2024-08-07');
 
 const CelibacyTracker = ({ year, month }) => {
   const [dailyRecords, setDailyRecords] = useState([]);

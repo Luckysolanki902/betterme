@@ -14,7 +14,7 @@ const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
 ];
 
-const startDate = new Date('2024-07-23');
+const startDate = new Date('2024-08-07');
 
 const Home = () => {
   const [todos, setTodos] = useState([]);
