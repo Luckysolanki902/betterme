@@ -28,25 +28,28 @@ const TodoListItem = ({ todo, handleEdit, handleDeleteClick }) => (
     <PriorityBadge priority={todo.priority} />
     <ListItemText
       primary={
-        <Typography variant="h6" component="div" sx={{ fontFamily: 'Poppins', fontWeight: 600 }}>
+        <Typography variant="h6" component="div" sx={{ fontFamily: 'Poppins', fontWeight: 400, wordBreak:'break-word' }}>
           {todo.title}
         </Typography>
       }
       secondary={
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="body2" component="div" sx={{ fontFamily: 'Poppins', color: 'text.secondary' }}>
           Percentage: {todo.percentage}%
         </Typography>
-      }
-      sx={{ flex: 1, ml: 2 }}
-    />
-    <ListItemSecondaryAction>
+        <Box>
       <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(todo)} >
         <Edit />
       </IconButton>
       <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteClick(todo._id)} >
         <Delete />
       </IconButton>
-    </ListItemSecondaryAction>
+    </Box>
+        </Box>
+      }
+      sx={{ flex: 1, ml: 2 }}
+    />
+
   </ListItem>
 );
 
