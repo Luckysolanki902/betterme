@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, TextField, Button, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Skeleton } from '@mui/material';
+import { Container, TextField, Button, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Skeleton, Alert } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import Dashboard from '@/components/Dashboard';
+import TodoListItem from '@/components/ModifyTodos';
 
 const AdminPanel = () => {
   const [todos, setTodos] = useState([]);
@@ -13,6 +14,8 @@ const AdminPanel = () => {
   const [deleteTodoId, setDeleteTodoId] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(''); // For displaying errors
+  
 
   const router = useRouter();
 
@@ -30,27 +33,39 @@ const AdminPanel = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      await fetch(`/api/todos/${currentTodoId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch('/api/todos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...form, priority: todos.length + 1 }), // Default priority
-      });
+    setError(''); // Clear previous errors
+    const priority = parseInt(form.priority, 10);
+
+    if (priority < 1 || priority > todos.length + 1) {
+      setError('Priority must be between 1 and n+1 (where n is the number of todos)');
+      return;
     }
-    fetchTodos();
-    setForm({ title: '', percentage: 0, priority: '' });
-    setIsEditing(false);
-    setCurrentTodoId(null);
+
+    try {
+      if (isEditing) {
+        await fetch(`/api/todos/${currentTodoId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...form, priority }),
+        });
+      } else {
+        await fetch('/api/todos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ...form, priority }),
+        });
+      }
+      fetchTodos();
+      setForm({ title: '', percentage: 0, priority: '' });
+      setIsEditing(false);
+      setCurrentTodoId(null);
+    } catch (err) {
+      setError('Error submitting todo. Please try again.');
+    }
   };
 
   const handleEdit = (todo) => {
@@ -121,6 +136,7 @@ const AdminPanel = () => {
           margin="normal"
           InputProps={{ inputProps: { min: 1, step: 1 } }}
         />
+        {error && <Alert severity="error">{error}</Alert>}
         <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
           {isEditing ? 'Update' : 'Add'} Todo
         </Button>
@@ -144,7 +160,7 @@ const AdminPanel = () => {
       </Box>
 
       <List sx={{ maxHeight: '23rem', overflow: 'auto' }}>
-        {(isLoading)? (
+        {isLoading ? (
           Array.from({ length: 20 }).map((_, index) => (
             <ListItem key={index} divider>
               <ListItemText
@@ -158,22 +174,12 @@ const AdminPanel = () => {
           ))
         ) : (
           todos.map((todo) => (
-            <ListItem key={todo._id} divider>
-              <ListItemText
-                primary={todo.title}
-                secondary={`Percentage: ${todo.percentage}%  #${todo.priority}`}
-                primaryTypographyProps={{ style: { fontFamily: 'Poppins' } }}
-                secondaryTypographyProps={{ style: { fontFamily: 'Poppins' } }}
-              />
-              <ListItemSecondaryAction>
-                <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(todo)}>
-                  <Edit />
-                </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteClick(todo._id)}>
-                  <Delete />
-                </IconButton>
-              </ListItemSecondaryAction>
-            </ListItem>
+            <TodoListItem
+              key={todo._id}
+              todo={todo}
+              handleEdit={handleEdit}
+              handleDeleteClick={handleDeleteClick}
+            />
           ))
         )}
       </List>

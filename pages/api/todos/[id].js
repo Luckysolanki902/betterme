@@ -11,10 +11,21 @@ const handler = async (req, res) => {
       const todo = await Todo.findById(id);
 
       if (todo) {
+        if (priority < 1) {
+          return res.status(400).json({ message: 'Priority must be at least 1' });
+        }
+
         // Adjust priorities
         if (priority !== todo.priority) {
-          await Todo.updateMany({ priority: { $gte: Math.min(priority, todo.priority), $lt: Math.max(priority, todo.priority) } }, { $inc: { priority: priority < todo.priority ? 1 : -1 } });
+          if (priority < todo.priority) {
+            // Shifting todos down
+            await Todo.updateMany({ priority: { $gte: priority, $lt: todo.priority } }, { $inc: { priority: 1 } });
+          } else {
+            // Shifting todos up
+            await Todo.updateMany({ priority: { $gt: todo.priority, $lte: priority } }, { $inc: { priority: -1 } });
+          }
         }
+
         const updatedTodo = await Todo.findByIdAndUpdate(id, { title, percentage, priority }, { new: true });
         res.status(200).json(updatedTodo);
       } else {
