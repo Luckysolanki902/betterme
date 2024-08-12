@@ -1,18 +1,23 @@
+// @pages/api/todos/index.js
 import connectToMongo from '@/middleware/connectToMongo';
 import Todo from '@/models/Todo';
 
 const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
-      const todos = await Todo.find({});
+      const todos = await Todo.find({}).sort({ priority: 1 }); // Sort by priority
       res.status(200).json(todos);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching todos', error });
     }
   } else if (req.method === 'POST') {
     try {
-      const { title, percentage } = req.body;
-      const newTodo = new Todo({ title, percentage });
+      const { title, percentage, priority } = req.body;
+      const newTodo = new Todo({ title, percentage, priority });
+      
+      // Update priorities for existing todos
+      await Todo.updateMany({ priority: { $gte: priority } }, { $inc: { priority: 1 } });
+      
       await newTodo.save();
       res.status(201).json(newTodo);
     } catch (error) {

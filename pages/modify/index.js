@@ -6,13 +6,13 @@ import Dashboard from '@/components/Dashboard';
 
 const AdminPanel = () => {
   const [todos, setTodos] = useState([]);
-  const [form, setForm] = useState({ title: '', percentage: 0 });
+  const [form, setForm] = useState({ title: '', percentage: 0, priority: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [currentTodoId, setCurrentTodoId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [deleteTodoId, setDeleteTodoId] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
 
@@ -44,17 +44,17 @@ const AdminPanel = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, priority: todos.length + 1 }), // Default priority
       });
     }
     fetchTodos();
-    setForm({ title: '', percentage: 0 });
+    setForm({ title: '', percentage: 0, priority: '' });
     setIsEditing(false);
     setCurrentTodoId(null);
   };
 
   const handleEdit = (todo) => {
-    setForm({ title: todo.title, percentage: todo.percentage });
+    setForm({ title: todo.title, percentage: todo.percentage, priority: todo.priority });
     setIsEditing(true);
     setCurrentTodoId(todo._id);
   };
@@ -81,7 +81,7 @@ const AdminPanel = () => {
   };
 
   const handleCancelEdit = () => {
-    setForm({ title: '', percentage: 0 });
+    setForm({ title: '', percentage: 0, priority: '' });
     setIsEditing(false);
     setCurrentTodoId(null);
   };
@@ -110,6 +110,16 @@ const AdminPanel = () => {
           required
           margin="normal"
           InputProps={{ inputProps: { min: 0, max: 100, step: 0.01 } }}
+        />
+        <TextField
+          label="Priority"
+          type="number"
+          value={form.priority}
+          onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value, 10) })}
+          fullWidth
+          required
+          margin="normal"
+          InputProps={{ inputProps: { min: 1, step: 1 } }}
         />
         <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
           {isEditing ? 'Update' : 'Add'} Todo
@@ -151,7 +161,7 @@ const AdminPanel = () => {
             <ListItem key={todo._id} divider>
               <ListItemText
                 primary={todo.title}
-                secondary={`Percentage: ${todo.percentage}%`}
+                secondary={`Percentage: ${todo.percentage}%  #${todo.priority}`}
                 primaryTypographyProps={{ style: { fontFamily: 'Poppins' } }}
                 secondaryTypographyProps={{ style: { fontFamily: 'Poppins' } }}
               />
