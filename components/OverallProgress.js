@@ -8,21 +8,28 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from 'recharts';
-import { Container, Typography, Box, useTheme } from '@mui/material';
-import { format, parseISO } from 'date-fns'; // Import parseISO for parsing date strings
+import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import { Container, Typography, Box, useTheme, useMediaQuery } from '@mui/material';
+import { format, parseISO, differenceInDays } from 'date-fns';
+import { useStartDate } from '@/contexts/StartDateContext';
+
 
 const OverallProgress = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const theme = useTheme();
+  const startDate = useStartDate()
+  const isSmallScreen = useMediaQuery('(max-width: 600px)');
+
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/overall-progress');
-        const data = await response.json();
-        setData(data);
+        const rawData = await response.json();
+        const cumulativeData = calculateCumulativeData(rawData);
+        setData(cumulativeData);
       } catch (error) {
         setError('Failed to fetch data');
       } finally {
@@ -33,12 +40,36 @@ const OverallProgress = () => {
     fetchData();
   }, []);
 
+  const calculateCumulativeData = (rawData) => {
+    let cumulativePercentage = 0;
+    return rawData.map((item) => {
+      cumulativePercentage += item.percentage;
+      return {
+        ...item,
+        cumulativePercentage: parseFloat(cumulativePercentage.toFixed(2)), // Round to 2 decimal places
+      };
+    });
+  };
+
+  // Calculate the maximum value and round it up to the next multiple of 0.5
+  const getYAxisDomain = () => {
+    const maxValue = Math.max(...data.map((item) => item.cumulativePercentage));
+    return Math.ceil(maxValue * 2) / 2; // Rounds up to the next multiple of 0.5
+  };
+
   if (loading) {
     return (
       <Box sx={{ padding: 2 }}>
-        <Typography  className='pop'  variant="h4" gutterBottom>
-          Overall Progress
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
+
+          <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
+            Overall Progress
+          </Typography>
+          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
+            <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
+            {dayCount}
+          </Typography>
+        </Box>
         <Container
           maxWidth="lg"
           sx={{
@@ -57,9 +88,16 @@ const OverallProgress = () => {
   if (error) {
     return (
       <Box sx={{ padding: 2 }}>
-        <Typography className='pop' variant="h4" gutterBottom>
-          Overall Progress
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
+
+          <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
+            Overall Progress
+          </Typography>
+          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
+            <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
+            {dayCount}
+          </Typography>
+        </Box>
         <Container
           maxWidth="lg"
           sx={{
@@ -75,30 +113,37 @@ const OverallProgress = () => {
     );
   }
 
-  // Helper function to format dates
   const formatXAxis = (tickItem) => {
-    const date = parseISO(tickItem); // Ensure tickItem is parsed as a date
+    const date = parseISO(tickItem);
     return format(date, 'MMM dd');
   };
-
+  const todayD = new Date();
+  const dayCount = differenceInDays(todayD, startDate) + 1;
   return (
     <Container maxWidth="lg">
-      <Typography  className='pop'  variant="h4" sx={{ marginBottom: '1rem' }}>
-        Overall Progress
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
+
+        <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
+          Overall Progress
+        </Typography>
+        <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
+          <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
+          {dayCount}
+        </Typography>
+      </Box>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
           <XAxis dataKey="date" tick={{ fontSize: '12px' }} tickFormatter={formatXAxis} />
           <YAxis
-            domain={[0, 2]}
+            domain={[0, getYAxisDomain()]} // Set Y-axis domain
             tickFormatter={(value) => `${value}%`}
             tick={{ fontSize: '12px' }}
           />
           <Tooltip formatter={(value) => `${value}%`} />
           <Line
             type="monotone"
-            dataKey="percentage"
+            dataKey="cumulativePercentage"
             stroke={theme.palette.primary.main}
             dot={{ stroke: theme.palette.primary.main, strokeWidth: 2 }}
             strokeWidth={2}

@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import { useEffect, useState } from 'react';
 import PasswordPage from '@/components/TypeAdminPassword';
 import { CircularProgress, Container } from '@mui/material';
+import { StartDateProvider } from "@/contexts/StartDateContext";
 
 export default function App({ Component, pageProps }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +31,7 @@ export default function App({ Component, pageProps }) {
       }
       setIsLoading(false);
     };
-    
+
     verifyToken();
   }, []);
 
@@ -42,5 +43,9 @@ export default function App({ Component, pageProps }) {
     );
   }
 
-  return isAuthenticated ? <Component {...pageProps} /> : <PasswordPage />;
+  return isAuthenticated ?
+    <StartDateProvider>
+      <Component {...pageProps} />
+    </StartDateProvider>
+    : <PasswordPage />;
 }

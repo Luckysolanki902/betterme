@@ -4,6 +4,7 @@ import OverallProgress from '@/components/OverallProgress';
 import { useRouter } from 'next/router';
 import CompletionCounts from '@/components/CompletionCounts';
 import Dashboard from '@/components/Dashboard';
+import DailyProgress from '@/components/DailyProgress';
 
 const Progress = () => {
   const router = useRouter();
@@ -15,6 +16,9 @@ const Progress = () => {
       </div>
       <div style={{ marginBottom: '4rem' }}>
         <CompletionCounts/> 
+      </div>
+      <div style={{ marginBottom: '4rem' }}>
+        <DailyProgress/> 
       </div>
       <Dashboard currentPage={'progress'} />
     </Container>

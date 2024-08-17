@@ -11,11 +11,12 @@ import {
   Typography,
   CircularProgress,
   Grid,
-  useMediaQuery,
-  useTheme,
-  Container
+  Container,
+  Card,
+  CardContent,
+  CardHeader
 } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from 'recharts';
+import CountUp from 'react-countup';
 import axios from 'axios';
 
 const CompletionCounts = () => {
@@ -25,11 +26,8 @@ const CompletionCounts = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
-
   // Default selection array
-  const defaultSelection = ['exercise', 'yoga', 'meditation'];
+  const defaultSelection = ['exercise', 'meditation', 'celibacy', 'dsa', 'webd', 'read a book', 'handstand practice', 'read trueself'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,7 +44,7 @@ const CompletionCounts = () => {
         const defaultTodoIds = todosResponse.data
           .filter(todo => defaultSelection.includes(todo.title.toLowerCase()))
           .map(todo => todo._id.toString());
-        
+
         setSelectedTodos(defaultTodoIds);
 
         setLoading(false);
@@ -70,23 +68,33 @@ const CompletionCounts = () => {
 
   const filteredData = data.filter(item => selectedTodos.includes(item.id));
 
-  // Calculate the max value in the filtered data to determine the domain
-  const maxCompletionCount = Math.max(...filteredData.map(item => item.completionCount), 0);
-  const yAxisDomain = [0, Math.ceil(maxCompletionCount / 10) * 10]; // Make the max value a multiple of 10
+  const truncateTitle = (title, maxLength = 12) => {
+    return title.length > maxLength ? `${title.substring(0, maxLength)}...` : title;
+  };
+
+  // Aggregate counts for selected todos
+  const aggregatedCounts = filteredData.reduce((acc, item) => {
+    acc[item.title] = (acc[item.title] || 0) + item.completionCount;
+    return acc;
+  }, {});
 
   return (
-    <Box sx={{ padding: 2 }}>
-      <Typography className='pop' variant="h4" gutterBottom>
-        Todo Counts
-      </Typography>
-      <Button
-        variant="outlined" 
-        onClick={handleDialogOpen}
-        sx={{ mb: 2 }}
-      >
-        Filter Todos
-      </Button>
+    <Box sx={{ padding: 4 }}>
+      <Box  sx={{display:'flex', justifyContent:'space-between'}}>
 
+        <Typography variant="h4" gutterBottom sx={{ mb: 2 }}>
+          Todo Counts
+        </Typography>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={handleDialogOpen}
+          sx={{ mb: 4 }}
+        >
+          Filter
+        </Button>
+
+      </Box>
       <Dialog
         open={dialogOpen}
         onClose={handleDialogClose}
@@ -94,9 +102,7 @@ const CompletionCounts = () => {
         maxWidth="sm"
       >
         <DialogTitle>Select Todos to Display</DialogTitle>
-        <DialogContent
-          dividers
-        >
+        <DialogContent dividers>
           <Grid container spacing={2}>
             {todos.map((todo) => (
               <Grid item xs={12} key={todo._id}>
@@ -122,36 +128,48 @@ const CompletionCounts = () => {
 
       {loading ? (
         <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <Typography variant="h6" sx={{ marginTop: theme.spacing(2) }}>
-            Loading...
-          </Typography>
+          <CircularProgress />
         </Container>
       ) : (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <BarChart
-            width={isSmallScreen ? 350 : 800}
-            height={isSmallScreen ? 300 : 400}
-            data={filteredData}
-            margin={{ top: 20, right: 20, bottom: 20, left: -20 }} // Increased bottom margin for rotated labels
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="title"
-              angle={-45} // Rotate labels
-              textAnchor="end" // Align rotated labels to end
-              style={{ fontSize: '12px' }} // Adjust font size if needed
-            />
-            <YAxis
-              tickFormatter={(tick) => tick} // Display integer values directly
-              domain={yAxisDomain} // Set domain to multiples of 10
-              tickCount={Math.max(5, Math.ceil(maxCompletionCount / 10) + 1)} // Ensure enough ticks to display integers
-            />
-            <Tooltip />
-            <Bar dataKey="completionCount" fill="#8884d8">
-              <LabelList dataKey="completionCount" position="top" />
-            </Bar>
-          </BarChart>
-        </div>
+        <Grid container spacing={3} justifyContent="center">
+          {Object.keys(aggregatedCounts).length === 0 ? (
+            <Typography>No data available</Typography>
+          ) : (
+            Object.entries(aggregatedCounts).map(([title, count]) => (
+              <Grid item xs={6} sm={6} key={title}>
+                <Card>
+                  <CardHeader
+                    title={
+                      <Typography
+                        noWrap
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {truncateTitle(title)}
+                      </Typography>
+                    }
+                    sx={{ backgroundColor: (theme) => theme.palette.primary.main, color: 'white', opacity: '0.9' }}
+                  />
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Typography variant="h5" component="div">
+                      <CountUp
+                        start={0}
+                        end={count}
+                        duration={1.5}
+                        separator=","
+                        decimals={0}
+                      />
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          )}
+        </Grid>
       )}
     </Box>
   );

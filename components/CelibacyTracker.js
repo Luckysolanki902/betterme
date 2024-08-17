@@ -15,6 +15,7 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import Dashboard from './Dashboard';
 import styles from '@/styles/Home.module.css'
 import { differenceInDays } from 'date-fns';
+import { useStartDate } from '@/contexts/StartDateContext';
 
 
 
@@ -38,7 +39,6 @@ function formatDate(date) {
   }
 }
 
-const startDate = new Date('2024-08-12');
 
 const CelibacyTracker = ({ year, month }) => {
   const [dailyRecords, setDailyRecords] = useState([]);
@@ -49,6 +49,8 @@ const CelibacyTracker = ({ year, month }) => {
   const [headingDate, setHeadingDate] = useState(new Date(year, month - 1, new Date().getDate()));
   const today = new Date(year, month - 1, new Date().getDate());
   const isSmallScreen = useMediaQuery('(max-width: 600px)');
+  const startDate = useStartDate()
+
   useEffect(() => {
     const fetchRecords = async () => {
       try {
@@ -128,8 +130,8 @@ const CelibacyTracker = ({ year, month }) => {
             {getMonthName(month)}
           </Typography>
 
-          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display:'flex', alignItems:'center' }}>
-            <LocalFireDepartmentIcon sx={{fontSize:'3rem', color:'#f57f17'}} />
+          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
+            <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
             {dayCount}
           </Typography>
         </Box>

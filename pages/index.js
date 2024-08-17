@@ -9,12 +9,11 @@ import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
 import Dashboard from '@/components/Dashboard';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
-
+import { useStartDate } from '@/contexts/StartDateContext';
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
 ];
 
-const startDate = new Date('2024-08-12');
 
 const Home = () => {
   const [todos, setTodos] = useState([]);
@@ -24,6 +23,7 @@ const Home = () => {
   const [totalCompletion, setTotalCompletion] = useState(0);
   const [isLoading, setIsLoading] = useState(true); // Loading state
   const router = useRouter();
+  const startDate = useStartDate()
 
   useEffect(() => {
     fetchTodos();
