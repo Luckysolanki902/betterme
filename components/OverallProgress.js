@@ -13,15 +13,12 @@ import { Container, Typography, Box, useTheme, useMediaQuery } from '@mui/materi
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { useStartDate } from '@/contexts/StartDateContext';
 
-
 const OverallProgress = () => {
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [status, setStatus] = useState({ loading: true, error: null });
   const theme = useTheme();
-  const startDate = useStartDate()
+  const startDate = useStartDate();
   const isSmallScreen = useMediaQuery('(max-width: 600px)');
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,10 +27,9 @@ const OverallProgress = () => {
         const rawData = await response.json();
         const cumulativeData = calculateCumulativeData(rawData);
         setData(cumulativeData);
+        setStatus({ loading: false, error: null });
       } catch (error) {
-        setError('Failed to fetch data');
-      } finally {
-        setLoading(false);
+        setStatus({ loading: false, error: 'Failed to fetch data' });
       }
     };
 
@@ -51,86 +47,29 @@ const OverallProgress = () => {
     });
   };
 
-  // Calculate the maximum value and round it up to the next multiple of 0.5
   const getYAxisDomain = () => {
     const maxValue = Math.max(...data.map((item) => item.cumulativePercentage));
     return Math.ceil(maxValue * 2) / 2; // Rounds up to the next multiple of 0.5
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
-
-          <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
-            Overall Progress
-          </Typography>
-          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
-            <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
-            {dayCount}
-          </Typography>
-        </Box>
-        <Container
-          maxWidth="lg"
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
-          }}
-        >
-          <Typography variant="h6">Loading...</Typography>
-        </Container>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ padding: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
-
-          <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
-            Overall Progress
-          </Typography>
-          <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
-            <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
-            {dayCount}
-          </Typography>
-        </Box>
-        <Container
-          maxWidth="lg"
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
-          }}
-        >
-          <Typography variant="h6">Some Error Occurred</Typography>
-        </Container>
-      </Box>
-    );
-  }
-
   const formatXAxis = (tickItem) => {
     const date = parseISO(tickItem);
     return format(date, 'MMM dd');
   };
+
   const todayD = new Date();
   const dayCount = differenceInDays(todayD, startDate) + 1;
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
 
-        <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
-          Overall Progress
-        </Typography>
-        <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
-          <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
-          {dayCount}
-        </Typography>
-      </Box>
+  const renderContent = () => {
+    if (status.loading) {
+      return <Typography variant="h6">Loading...</Typography>;
+    }
+
+    if (status.error) {
+      return <Typography variant="h6">Some Error Occurred</Typography>;
+    }
+
+    return (
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 20, right: 10, left: -25, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
@@ -150,8 +89,34 @@ const OverallProgress = () => {
           />
         </LineChart>
       </ResponsiveContainer>
-    </Container>
+    );
+  };
+
+  return (
+    <Box sx={{ padding: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', padding: !isSmallScreen ? '0 0rem' : '0' }}>
+        <Typography className='pop' variant="h4" sx={{ marginBottom: '1rem' }}>
+          Overall Progress
+        </Typography>
+        <Typography className='pop' variant="h3" gutterBottom sx={{ marginBottom: '2rem', display: 'flex', alignItems: 'center' }}>
+          <LocalFireDepartmentIcon sx={{ fontSize: '3rem', color: '#f57f17' }} />
+          {dayCount}
+        </Typography>
+      </Box>
+      <Container
+        maxWidth="lg"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '400px',
+        }}
+      >
+        {renderContent()}
+      </Container>
+    </Box>
   );
 };
 
 export default OverallProgress;
+
