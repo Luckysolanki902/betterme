@@ -82,15 +82,17 @@ const History = () => {
         <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Container className={styles.homeContainer} maxWidth="md">
                 <Box sx={{ mb: 4 }}>
+                    <TotalCompletion percentageProp={totalCompletion} datestring={dateString} />
                     <DatePicker
                         label="Select Date"
                         value={selectedDate}
                         onChange={(newValue) => setSelectedDate(newValue)}
                         minDate={dayjs(startDate)}
                         maxDate={today}
-                        renderInput={(params) => <TextField {...params} />}
+                        sx={{marginBottom:'2rem'}}
+                        renderInput={(params) => <TextField {...params} />
+                    }
                     />
-                    <TotalCompletion percentageProp={totalCompletion} datestring={dateString} />
                     <Quote text={quote} />
                     <Box>
                         <DailyCompletion percentageProp={dailyPercentage} />
