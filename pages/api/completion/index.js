@@ -1,3 +1,4 @@
+// pages/api/completion/index.js
 import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
 import TotalCompletion from '@/models/TotalCompletion';
@@ -6,12 +7,12 @@ import { format } from 'date-fns';
 
 const handler = async (req, res) => {
   if (req.method === 'POST') {
-    const { todoId } = req.body;
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const { todoId, date } = req.body;
+    const selectedDate = date || format(new Date(), 'yyyy-MM-dd');
 
-    let dailyCompletion = await DailyCompletion.findOne({ date: today });
+    let dailyCompletion = await DailyCompletion.findOne({ date: selectedDate });
     if (!dailyCompletion) {
-      dailyCompletion = new DailyCompletion({ date: today, completedTodos: [], percentage: 0 });
+      dailyCompletion = new DailyCompletion({ date: selectedDate, completedTodos: [], percentage: 0 });
     }
 
     const todo = await Todo.findById(todoId);

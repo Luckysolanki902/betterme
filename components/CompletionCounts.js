@@ -27,7 +27,7 @@ const CompletionCounts = () => {
   const [loading, setLoading] = useState(true);
 
   // Default selection array
-  const defaultSelection = ['exercise', 'meditation', 'celibacy', 'dsa', 'webd', 'read a book', 'handstand practice', 'read trueself'];
+  const defaultSelection = ['exercise', 'meditation', 'dsa', 'webd', 'read trueself'];
 
   useEffect(() => {
     const fetchData = async () => {
