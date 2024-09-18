@@ -6,7 +6,7 @@ const TodoSchema = new mongoose.Schema({
     type: Number, 
     required: true, 
     min: [0, 'Percentage must be at least 0'], 
-    max: [100, 'Percentage must be at most 100'] // Updated to allow up to 100
+    max: [1, 'Percentage must be at most 100'] // this is the percentage alloted to each todo, which means if you complete this task you are +x% better than before
   },
   completed: { type: Boolean, default: false },
   lastUpdated: { type: Date, default: () => new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }) },
