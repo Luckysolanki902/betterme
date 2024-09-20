@@ -34,6 +34,7 @@ const Levels = () => {
   const [editingLevelId, setEditingLevelId] = useState(null);
   const [improvedPercentage, setImprovedPercentage] = useState(0);
   const [totalImprovement, setTotalImprovement] = useState(0);
+  const [totalDaysSinceStart, setTotalDaysSinceStart] = useState(0); // For overall days since the earliest level
 
   useEffect(() => {
     fetchLevels();
@@ -45,6 +46,18 @@ const Levels = () => {
     const data = await res.json();
     setLevels(data);
     setCurrentLevel(data.length - 1);
+    calculateTotalDaysSinceStart(data);
+  };
+
+  // Function to calculate the total number of days since the start date of the earliest level
+  const calculateTotalDaysSinceStart = (levelsData) => {
+    if (levelsData.length > 0) {
+      const earliestStartDate = new Date(levelsData[0].startDate); // Get the start date of the first level
+      const currentDate = new Date();
+      const diffInTime = currentDate - earliestStartDate;
+      const diffInDays = Math.floor(diffInTime / (1000 * 60 * 60 * 24)); // Convert the time difference to days
+      setTotalDaysSinceStart(diffInDays + 1); // Add 1 to include today
+    }
   };
 
   const createNextLevel = async () => {
@@ -85,13 +98,11 @@ const Levels = () => {
     setDialogOpen(true);
   };
 
-
   const fetchTotalCompletion = async () => {
     const res = await fetch('/api/total-completion');
     const data = await res.json();
     setTotalImprovement(data.totalPercentage);
   };
-
 
   const handleSaveEdit = async () => {
     await fetch(`/api/levels/${editingLevelId}`, {
@@ -119,10 +130,17 @@ const Levels = () => {
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: '#3b5998' }}>
-          My Journey
-        </Typography>
+        <Box sx={{display:'flex', alignItems:'baseline', justifyContent:'center'}}>
 
+          <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: '#3b5998' }}>
+            My Journey
+          </Typography>
+
+          {/* Display total days since the earliest level */}
+          <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: '#3b5998', marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
+            {`${totalDaysSinceStart}`} <LocalFireDepartmentIcon sx={{ color: '#f57f17', fontSize: '2.5rem' }}/>
+          </Typography>
+        </Box>
         <Timeline sx={{ [`& .${timelineItemClasses.root}:before`]: { flex: 0, padding: 0 } }}>
           {trail.map((style, index) => {
             const level = levels[index];
@@ -150,13 +168,10 @@ const Levels = () => {
                           <Typography variant="h6" sx={{ color: isCurrentLevel ? 'green' : '#000' }}>
                             {level.levelName}
                           </Typography>
-                          {/* <IconButton onClick={() => handleEditToggle(level)}>
-                            <Edit />
-                          </IconButton> */}
                         </Box>
-                        
+
                         {/* Number of Days Since Start */}
-                        <Box sx={{ display: 'flex', alignItems: 'center'}}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Typography
                             sx={{ color: '#555', mb: 0, fontSize: '1.2rem' }} // Set mb to 0 for better vertical alignment
                           >
@@ -164,17 +179,17 @@ const Levels = () => {
                           </Typography>
                           <LocalFireDepartmentIcon sx={{ marginLeft: '0.1rem', color: isCurrentLevel ? '#f57f17' : 'gray' }} />
                         </Box>
-                      {/* Start Date */}
-                      <Typography sx={{ color: '#555', mb: 1 }}>
-                        {new Date(level.startDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </Typography>
-                      <Typography variant="h6" sx={{  fontWeight: isCurrentLevel ? 'bold' : 'normal' }} color={isCurrentLevel ? 'success' : '#000'}>
-                        {calculateImprovedPercentageForLevel(index)}%
-                      </Typography>
+                        {/* Start Date */}
+                        <Typography sx={{ color: '#555', mb: 1 }}>
+                          {new Date(level.startDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: isCurrentLevel ? 'bold' : 'normal' }} color={isCurrentLevel ? 'success' : '#000'}>
+                          {calculateImprovedPercentageForLevel(index)}%
+                        </Typography>
                       </CardContent>
                     </Card>
                   </animated.div>
@@ -185,7 +200,7 @@ const Levels = () => {
         </Timeline>
 
         <Box sx={{ textAlign: 'center', mt: 4 }}>
-          <Button variant="contained"  sx={{width:'200px'}} color="primary" onClick={() => setDialogOpen(true)}>
+          <Button variant="contained" sx={{ width: '200px' }} color="primary" onClick={() => setDialogOpen(true)}>
             Next Level
           </Button>
         </Box>
