@@ -8,7 +8,6 @@ import styles from '../styles/Home.module.css';
 import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
 import Dashboard from '@/components/Dashboard';
-import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import { useStartDate } from '@/contexts/StartDateContext';
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"

@@ -6,6 +6,7 @@ import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import LocalFireDepartmentRoundedIcon from '@mui/icons-material/LocalFireDepartmentRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 import TmelineIcon from '@mui/icons-material/Timeline';
+import EscalatorIcon from '@mui/icons-material/Escalator';
 import HistoryIcon from '@mui/icons-material/History';
 const Dashboard = ({ currentPage }) => {
     const router = useRouter();
@@ -74,6 +75,16 @@ const Dashboard = ({ currentPage }) => {
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <HistoryIcon color='gray' sx={{ color: 'gray' }} />
                                 <Typography className='lato' variant="h6">Past Todos</Typography>
+                            </CardContent>
+                        </CardActionArea>
+                    </Card>
+                </Grid>}
+                {currentPage != 'levels' && <Grid item xs={12} sm={6}>
+                    <Card>
+                        <CardActionArea onClick={() => handleCardClick('/levels')}>
+                            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <EscalatorIcon color='gray' sx={{ color: 'gray' }} />
+                                <Typography className='lato' variant="h6">My Journey</Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
