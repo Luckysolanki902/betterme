@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 const handler = async (req, res) => {
   if (req.method === 'GET') {
     // Set the start date to July 23, 2024
-    const start = new Date('2024-07-22T00:00:00Z');
+    const start = new Date('2024-09-27T00:00:00Z');
     // Set the end date to today
     const end = new Date();
 
