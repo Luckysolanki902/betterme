@@ -86,7 +86,7 @@ const Levels = () => {
     for (let i = 0; i < levelIndex; i++) {
       total -= levels[i].improvedPercentage;
     }
-    return total;
+    return total.toFixed(2);
   };
 
   const handleEditToggle = (level) => {
@@ -130,7 +130,7 @@ const Levels = () => {
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 4 }}>
-        <Box sx={{display:'flex', alignItems:'baseline', justifyContent:'center'}}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center' }}>
 
           <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: '#3b5998' }}>
             My Journey
@@ -138,7 +138,7 @@ const Levels = () => {
 
           {/* Display total days since the earliest level */}
           <Typography variant="h4" sx={{ textAlign: 'center', mb: 4, color: '#3b5998', marginLeft: '1rem', display: 'flex', alignItems: 'center' }}>
-            {`${totalDaysSinceStart}`} <LocalFireDepartmentIcon sx={{ color: '#f57f17', fontSize: '2.5rem' }}/>
+            {`${totalDaysSinceStart}`} <LocalFireDepartmentIcon sx={{ color: '#f57f17', fontSize: '2.5rem' }} />
           </Typography>
         </Box>
         <Timeline sx={{ [`& .${timelineItemClasses.root}:before`]: { flex: 0, padding: 0 } }}>
@@ -185,9 +185,13 @@ const Levels = () => {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric'
+                          })} {!isCurrentLevel && '-'} {!isCurrentLevel && new Date(level.endDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
                           })}
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: isCurrentLevel ? 'bold' : 'normal' }} color={isCurrentLevel ? 'success' : '#000'}>
+                        <Typography variant="h6" sx={{ fontWeight: isCurrentLevel ? 'normal' : 'normal' }} color={isCurrentLevel ? '#000' : '#000'}>
                           {calculateImprovedPercentageForLevel(index)}%
                         </Typography>
                       </CardContent>
