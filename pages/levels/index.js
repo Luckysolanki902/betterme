@@ -175,7 +175,7 @@ const Levels = () => {
                           <Typography
                             sx={{ color: '#555', mb: 0, fontSize: '1.2rem' }} // Set mb to 0 for better vertical alignment
                           >
-                            {isCurrentLevel ? Math.floor((new Date() - new Date(level.startDate)) / (1000 * 60 * 60 * 24)) + 2 : level.noOfDays}
+                            {isCurrentLevel ? Math.floor((new Date() - new Date(level.startDate)) / (1000 * 60 * 60 * 24)) + 1 : level.noOfDays}
                           </Typography>
                           <LocalFireDepartmentIcon sx={{ marginLeft: '0.1rem', color: isCurrentLevel ? '#f57f17' : 'gray' }} />
                         </Box>
