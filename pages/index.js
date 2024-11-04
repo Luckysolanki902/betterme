@@ -1,3 +1,4 @@
+// pages/index.js (or pages/Home.js depending on your setup)
 import { useState, useEffect } from 'react';
 import { Container, Typography, Box } from '@mui/material';
 import { differenceInDays } from 'date-fns';
@@ -9,10 +10,10 @@ import { useRouter } from 'next/router';
 import DailyCompletion from '@/components/DailyCompletion';
 import Dashboard from '@/components/Dashboard';
 import { useStartDate } from '@/contexts/StartDateContext';
+
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow"
 ];
-
 
 const Home = () => {
   const [todos, setTodos] = useState([]);
@@ -22,7 +23,7 @@ const Home = () => {
   const [totalCompletion, setTotalCompletion] = useState(0);
   const [isLoading, setIsLoading] = useState(true); // Loading state
   const router = useRouter();
-  const startDate = useStartDate()
+  const startDate = useStartDate();
 
   useEffect(() => {
     fetchTodos();
@@ -33,23 +34,36 @@ const Home = () => {
 
   const fetchTodos = async () => {
     setIsLoading(true);
-    const res = await fetch('/api/todos');
-    const data = await res.json();
-    setTodos(data);
-    setIsLoading(false);
+    try {
+      const res = await fetch('/api/todos');
+      const data = await res.json();
+      setTodos(data);
+    } catch (error) {
+      console.error('Error fetching todos:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchDailyCompletion = async () => {
-    const res = await fetch('/api/daily-completion');
-    const data = await res.json();
-    setCompletedTodos(data.completedTodos);
-    setDailyPercentage(data.percentage);
+    try {
+      const res = await fetch('/api/daily-completion');
+      const data = await res.json();
+      setCompletedTodos(data.completedTodos);
+      setDailyPercentage(data.percentage);
+    } catch (error) {
+      console.error('Error fetching daily completion:', error);
+    }
   };
 
   const fetchTotalCompletion = async () => {
-    const res = await fetch('/api/total-completion');
-    const data = await res.json();
-    setTotalCompletion(data.totalPercentage);
+    try {
+      const res = await fetch('/api/total-completion');
+      const data = await res.json();
+      setTotalCompletion(data.totalPercentage);
+    } catch (error) {
+      console.error('Error fetching total completion:', error);
+    }
   };
 
   const setRandomQuote = () => {
@@ -58,15 +72,22 @@ const Home = () => {
   };
 
   const handleToggleTodo = async (todoId) => {
-    await fetch('/api/completion', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ todoId }),
-    });
-    fetchDailyCompletion();
-    fetchTotalCompletion();
+    try {
+      const res = await fetch('/api/completion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ todoId }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to toggle todo');
+      }
+      fetchDailyCompletion();
+      fetchTotalCompletion();
+    } catch (error) {
+      console.error('Error toggling todo:', error);
+    }
   };
 
   const today = new Date();
@@ -81,7 +102,12 @@ const Home = () => {
         <Box>
           <DailyCompletion percentageProp={dailyPercentage} />
         </Box>
-        <Todos todos={todos} completedTodos={completedTodos} handleToggleTodo={handleToggleTodo} isLoading={isLoading} />
+        <Todos
+          todos={todos}
+          completedTodos={completedTodos}
+          handleToggleTodo={handleToggleTodo}
+          isLoading={isLoading}
+        />
       </Box>
       <Dashboard currentPage={'home'} />
     </Container>

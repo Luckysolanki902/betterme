@@ -1,58 +1,31 @@
-import React, { useState, useCallback } from 'react';
-import { Card, CardContent, Checkbox, Typography, Box, Skeleton, TextField } from '@mui/material';
+// components/Todos.js
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  Card,
+  CardContent,
+  Checkbox,
+  Typography,
+  Box,
+  Skeleton,
+  TextField,
+  Divider,
+} from '@mui/material';
 import { useSpring, animated } from 'react-spring';
-import { useRouter } from 'next/router';
 import debounce from 'lodash/debounce';
 
-// Function to generate a random, distinct pastel color
-const getRandomPastelColor = (() => {
-  let previousHue = null;
-  return () => {
-    const getDistinctHue = () => {
-      const hueStep = 30;
-      let hue = Math.floor(Math.random() * 360);
-      if (previousHue !== null) {
-        while (Math.abs(hue - previousHue) < hueStep) {
-          hue = Math.floor(Math.random() * 360);
-        }
-      }
-      previousHue = hue;
-      return hue;
-    };
-    const hue = getDistinctHue();
-    const saturation = 100 + Math.random() * 10; // 100-110%
-    const lightness = 90 + Math.random() * 5; // 90-95%
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-  };
-})();
+// Function to generate a random pastel color
+const generatePastelColor = () => {
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 70 + Math.random() * 10; // 70-80%
+  const lightness = 80 + Math.random() * 10; // 80-90%
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
 
 const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
-  const router = useRouter();
   const props = useSpring({ opacity: 1, from: { opacity: 0 }, config: { duration: 500 } });
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Keywords that will trigger pastel coloring
-  const highlightWords = [
-    'read',
-    'slept',
-    'meditation',
-    'vlog',
-    'vocabulary',
-    'Spectacles',
-    'chant',
-    'duolingo',
-    'write',
-    'videos',
-    'reels',
-    'managed'
-  ];
-
-  // Check if a todo's title contains any of the keywords (case-insensitive)
-  const doesTodoContainWord = (title) => {
-    return highlightWords.some((word) => title.toLowerCase().includes(word.toLowerCase()));
-  };
-
-  // Handle search input with debounce
+  // Debounced search handler to optimize performance
   const handleSearchChange = useCallback(
     debounce((event) => {
       setSearchTerm(event.target.value);
@@ -60,21 +33,30 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
     []
   );
 
-  // Sort todos: matched todos first, then sorted by completed status
-  const sortedTodos = [...todos]
-    .sort((a, b) => {
-      const isACompleted = completedTodos?.includes(a._id);
-      const isBCompleted = completedTodos?.includes(b._id);
+  // Filter todos based on search term (case-insensitive)
+  const filteredTodos = useMemo(() => {
+    return todos.filter((todo) =>
+      todo.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [todos, searchTerm]);
 
-      // Check relevance based on search term
-      const aMatches = a.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const bMatches = b.title.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Sort by relevance first, then by completed status
-      if (aMatches && !bMatches) return -1;
-      if (!aMatches && bMatches) return 1;
-      return isACompleted - isBCompleted;
+  // Group filtered todos by category
+  const groupedTodos = useMemo(() => {
+    const groups = {};
+    filteredTodos.forEach((todo) => {
+      const category = todo.category || 'Uncategorized';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(todo);
     });
+    return groups;
+  }, [filteredTodos]);
+
+  // Get sorted category names
+  const sortedCategories = useMemo(() => {
+    return Object.keys(groupedTodos).sort();
+  }, [groupedTodos]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -88,16 +70,17 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
       />
 
       {/* Todo List */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: '23rem', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {isLoading ? (
-          Array.from({ length: 20 }).map((_, index) => (
+          // Loading Skeletons
+          Array.from({ length: 10 }).map((_, index) => (
             <animated.div key={index} style={props}>
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      <Skeleton variant="text" width={100} />
-                      <Skeleton variant="text" width={50} />
+                      <Skeleton variant="text" width={150} height={30} />
+                      <Skeleton variant="text" width={100} height={20} />
                     </Box>
                     <Skeleton variant="circular" width={40} height={40} />
                   </Box>
@@ -105,43 +88,75 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
               </Card>
             </animated.div>
           ))
+        ) : sortedCategories.length === 0 ? (
+          // No Todos Found
+          <Typography variant="body1" color="text.secondary">
+            No todos found.
+          </Typography>
         ) : (
-          sortedTodos?.map((todo) => {
-            const isHighlighted = doesTodoContainWord(todo.title);
-            const randomPastelColor = isHighlighted ? getRandomPastelColor() : 'inherit';
+          // Render Todos Grouped by Category
+          sortedCategories.map((category) => (
+            <Box key={category}>
+              {/* Category Header */}
+              <Typography
+                variant="h6"
+                sx={{
+                  marginBottom: 1,
+                  color: 'black', // MUI primary color shade
+                }}
+              >
+                {category}
+              </Typography>
+              <Divider sx={{ marginBottom: 2 }} />
 
-            return (
-              <animated.div key={todo._id} style={props}>
-                <Card
-                  sx={{
-                    backgroundColor: randomPastelColor, // Apply random pastel color if highlighted
-                    transition: 'background-color 0.3s ease', // Smooth transition for color
-                  }}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography className="pop" variant="h6">
-                          {todo.title}
-                        </Typography>
-                        <Typography
-                          className="pop"
-                          variant="body2"
-                          sx={{ color: completedTodos?.includes(todo._id) ? 'green' : 'gray' }}
-                        >
-                          {todo.percentage}%
-                        </Typography>
-                      </Box>
-                      <Checkbox
-                        checked={completedTodos?.includes(todo._id)}
-                        onChange={() => handleToggleTodo(todo._id)}
-                      />
-                    </Box>
-                  </CardContent>
-                </Card>
-              </animated.div>
-            );
-          })
+              {/* Todos Under Category */}
+              {groupedTodos[category].map((todo) => {
+                const isCompleted = completedTodos.includes(todo._id);
+                const backgroundColor = todo.isColorful ? generatePastelColor() : 'inherit';
+
+                return (
+                  <animated.div key={todo._id} style={props}>
+                    <Card
+                      sx={{
+                        backgroundColor: backgroundColor,
+                        transition: 'background-color 0.3s ease',
+                        marginBottom:'2rem',
+                      }}
+                    >
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontWeight: 500,
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {todo.title}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: isCompleted ? 'green' : 'gray',
+                              }}
+                            >
+                              {(todo.percentage * 100).toFixed(2)}%
+                            </Typography>
+                          </Box>
+                          <Checkbox
+                            checked={isCompleted}
+                            onChange={() => handleToggleTodo(todo._id)}
+                            color="primary"
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </animated.div>
+                );
+              })}
+            </Box>
+          ))
         )}
       </Box>
     </Box>

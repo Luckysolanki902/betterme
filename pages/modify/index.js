@@ -8,7 +8,6 @@ import {
   ListItemText,
   ListItemSecondaryAction
 } from '@mui/material';
-import { Edit, Delete } from '@mui/icons-material';
 import Dashboard from '@/components/Dashboard';
 import TodoListItem from '@/components/TodoListItem';
 import axios from 'axios';
