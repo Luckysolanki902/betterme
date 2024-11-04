@@ -1,13 +1,22 @@
+// components/AdminPanel.js
 import React, { useState, useEffect } from 'react';
-import { Container, TextField, Button, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Skeleton, Alert } from '@mui/material';
+import { 
+  Container, TextField, Button, List, Typography, Box, Dialog, 
+  DialogActions, DialogContent, DialogContentText, DialogTitle, 
+  Skeleton, Alert, Checkbox, FormControlLabel, Autocomplete, 
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction
+} from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
-import { useRouter } from 'next/router';
 import Dashboard from '@/components/Dashboard';
-import TodoListItem from '@/components/ModifyTodos';
+import TodoListItem from '@/components/TodoListItem';
+import axios from 'axios';
 
 const AdminPanel = () => {
   const [todos, setTodos] = useState([]);
-  const [form, setForm] = useState({ title: '', percentage: 0, priority: '' });
+  const [categories, setCategories] = useState([]);
+  const [form, setForm] = useState({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [currentTodoId, setCurrentTodoId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -15,9 +24,6 @@ const AdminPanel = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(''); // For displaying errors
-  
-
-  const router = useRouter();
 
   useEffect(() => {
     fetchTodos();
@@ -25,10 +31,16 @@ const AdminPanel = () => {
 
   const fetchTodos = async () => {
     setIsLoading(true);
-    const res = await fetch('/api/todos');
-    const data = await res.json();
-    setTodos(data);
-    setIsLoading(false);
+    try {
+      const res = await axios.get('/api/todos');
+      setTodos(res.data);
+      const uniqueCategories = [...new Set(res.data.map(todo => todo.category))];
+      setCategories(uniqueCategories);
+    } catch (err) {
+      setError('Error fetching todos');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -37,30 +49,34 @@ const AdminPanel = () => {
     const priority = parseInt(form.priority, 10);
 
     if (priority < 1 || priority > todos.length + 1) {
-      setError('Priority must be between 1 and n+1 (where n is the number of todos)');
+      setError(`Priority must be between 1 and ${todos.length + 1}`);
+      return;
+    }
+
+    if (!form.category) {
+      setError('Category is required');
       return;
     }
 
     try {
+      const payload = { 
+        title: form.title, 
+        percentage: parseFloat(form.percentage), 
+        priority, 
+        isColorful: form.isColorful,
+        category: form.category,
+      };
+
       if (isEditing) {
-        await fetch(`/api/todos/${currentTodoId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...form, priority }),
-        });
+        const res = await axios.put(`/api/todos/${currentTodoId}`, payload);
+        if (res.status !== 200) throw new Error('Failed to update');
       } else {
-        await fetch('/api/todos', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...form, priority }),
-        });
+        const res = await axios.post('/api/todos', payload);
+        if (res.status !== 201) throw new Error('Failed to create');
       }
+
       fetchTodos();
-      setForm({ title: '', percentage: 0, priority: '' });
+      setForm({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
       setIsEditing(false);
       setCurrentTodoId(null);
     } catch (err) {
@@ -69,7 +85,13 @@ const AdminPanel = () => {
   };
 
   const handleEdit = (todo) => {
-    setForm({ title: todo.title, percentage: todo.percentage, priority: todo.priority });
+    setForm({ 
+      title: todo.title, 
+      percentage: todo.percentage, 
+      priority: todo.priority, 
+      isColorful: todo.isColorful,
+      category: todo.category,
+    });
     setIsEditing(true);
     setCurrentTodoId(todo._id);
   };
@@ -81,12 +103,15 @@ const AdminPanel = () => {
 
   const handleDeleteConfirm = async () => {
     if (deleteConfirmText === 'delete') {
-      await fetch(`/api/todos/${deleteTodoId}`, {
-        method: 'DELETE',
-      });
-      fetchTodos();
-      setOpenDialog(false);
-      setDeleteConfirmText('');
+      try {
+        const res = await axios.delete(`/api/todos/${deleteTodoId}`);
+        if (res.status !== 204) throw new Error('Failed to delete');
+        fetchTodos();
+        setOpenDialog(false);
+        setDeleteConfirmText('');
+      } catch (err) {
+        setError('Error deleting todo. Please try again.');
+      }
     }
   };
 
@@ -96,7 +121,7 @@ const AdminPanel = () => {
   };
 
   const handleCancelEdit = () => {
-    setForm({ title: '', percentage: 0, priority: '' });
+    setForm({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
     setIsEditing(false);
     setCurrentTodoId(null);
   };
@@ -107,6 +132,11 @@ const AdminPanel = () => {
 
   return (
     <Container maxWidth="md">
+      <Typography className='pop' variant="h4" gutterBottom sx={{ mt: 4, mb: 2 }}>
+        Admin Panel
+      </Typography>
+      
+      {/* Todo Form */}
       <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3 }}>
         <TextField
           label="Title"
@@ -124,7 +154,7 @@ const AdminPanel = () => {
           fullWidth
           required
           margin="normal"
-          InputProps={{ inputProps: { min: 0, max: 100, step: 0.01 } }}
+          InputProps={{ inputProps: { min: 0, max: 1, step: 0.01 } }}
         />
         <TextField
           label="Priority"
@@ -136,29 +166,67 @@ const AdminPanel = () => {
           margin="normal"
           InputProps={{ inputProps: { min: 1, step: 1 } }}
         />
-        {error && <Alert severity="error">{error}</Alert>}
-        <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
-          {isEditing ? 'Update' : 'Add'} Todo
-        </Button>
-        {isEditing && (
-          <Button variant="outlined" color="secondary" onClick={handleCancelEdit}>
-            Cancel Edit
+
+        <Autocomplete
+          freeSolo
+          options={categories}
+          value={form.category}
+          onChange={(event, newValue) => {
+            setForm({ ...form, category: newValue });
+          }}
+          onInputChange={(event, newInputValue) => {
+            setForm({ ...form, category: newInputValue });
+          }}
+          renderInput={(params) => (
+            <TextField 
+              {...params} 
+              label="Category" 
+              margin="normal" 
+              required 
+            />
+          )}
+          sx={{ mb: 2 }}
+        />
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={form.isColorful}
+              onChange={(e) => setForm({ ...form, isColorful: e.target.checked })}
+              color="primary"
+              sx={{marginLeft:'0.5rem'}}
+            />
+          }
+          label="Colorful Background"
+        />
+
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        <Box sx={{ mt: 2 }}>
+          <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
+            {isEditing ? 'Update' : 'Add'} Todo
           </Button>
-        )}
+          {isEditing && (
+            <Button variant="outlined" color="secondary" onClick={handleCancelEdit}>
+              Cancel Edit
+            </Button>
+          )}
+        </Box>
       </Box>
 
+      {/* Statistics */}
       <Box mb={3} sx={{ display: 'flex', justifyContent: 'space-around' }}>
         <Typography className='pop' variant="body1">
           Count: {totalTodos}
         </Typography>
         <Typography className='pop' variant="body1">
-          Total: {totalPercentage.toFixed(2)}%
+          Total: {(totalPercentage * 100).toFixed(2)}%
         </Typography>
         <Typography className='pop' variant="body1">
-          Avg: {averagePercentage}%
+          Avg: {(averagePercentage * 100).toFixed(2)}%
         </Typography>
       </Box>
 
+      {/* Todo List */}
       <List sx={{ maxHeight: '23rem', overflow: 'auto' }}>
         {isLoading ? (
           Array.from({ length: 20 }).map((_, index) => (
@@ -173,18 +241,31 @@ const AdminPanel = () => {
             </ListItem>
           ))
         ) : (
-          todos.map((todo) => (
-            <TodoListItem
-              key={todo._id}
-              todo={todo}
-              handleEdit={handleEdit}
-              handleDeleteClick={handleDeleteClick}
-            />
-          ))
+          // Group todos by category
+          categories.map((category) => {
+            const todosInCategory = todos.filter(todo => todo.category === category);
+            if (todosInCategory.length === 0) return null;
+
+            return (
+              <Box key={category} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  {category}
+                </Typography>
+                {todosInCategory.map((todo) => (
+                  <TodoListItem
+                    key={todo._id}
+                    todo={todo}
+                    handleEdit={handleEdit}
+                    handleDeleteClick={handleDeleteClick}
+                  />
+                ))}
+              </Box>
+            );
+          })
         )}
       </List>
-      <div style={{ marginBottom: '5rem' }}></div>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={openDialog} onClose={handleDeleteCancel}>
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
@@ -204,11 +285,17 @@ const AdminPanel = () => {
           <Button onClick={handleDeleteCancel} color="primary">
             Cancel
           </Button>
-          <Button onClick={handleDeleteConfirm} color="warning" disabled={deleteConfirmText !== 'delete'}>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="warning" 
+            disabled={deleteConfirmText !== 'delete'}
+          >
             Delete
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dashboard */}
       <Dashboard currentPage={'modify'} />
     </Container>
   );

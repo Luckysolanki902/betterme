@@ -9,11 +9,21 @@ export const StartDateProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchStartDate = async () => {
-      const res = await fetch('/api/levels');
-      const levels = await res.json();
-      const lastLevel = levels.length ? levels[levels.length - 1] : null;
-      const date = lastLevel ? new Date(lastLevel.startDate) : new Date(); // Fallback to now if no levels
-      setStartDate(date);
+      try {
+        const res = await fetch('/api/configs');
+        
+        // Check if the response is OK
+        if (res.ok) {
+          const config = await res.json();
+          // Extract the startDate from the config
+          const date = config.startDate ? new Date(config.startDate) : null;
+          setStartDate(date);
+        } else {
+          console.error("Failed to fetch config:", res.status);
+        }
+      } catch (error) {
+        console.error("Error fetching config:", error);
+      }
     };
 
     fetchStartDate();

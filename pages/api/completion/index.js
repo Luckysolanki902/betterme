@@ -1,7 +1,7 @@
 // pages/api/completion/index.js
 import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
-import TotalCompletion from '@/models/TotalCompletion';
+import TotalCompletion from '@/models/Config';
 import Todo from '@/models/Todo';
 import { format } from 'date-fns';
 

@@ -1,5 +1,5 @@
 import connectToMongo from '@/middleware/connectToMongo';
-import TotalCompletion from '@/models/TotalCompletion';
+import TotalCompletion from '@/models/Config';
 
 const handler = async (req, res) => {
   if (req.method === 'GET') {

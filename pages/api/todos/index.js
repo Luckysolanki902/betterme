@@ -1,4 +1,4 @@
-// @pages/api/todos/index.js
+// pages/api/todos/index.js
 import connectToMongo from '@/middleware/connectToMongo';
 import Todo from '@/models/Todo';
 
@@ -12,7 +12,12 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'POST') {
     try {
-      const { title, percentage, priority } = req.body;
+      const { title, percentage, priority, category, isColorful } = req.body;
+
+      if (!category) {
+        return res.status(400).json({ message: 'Category is required' });
+      }
+
       const existingTodos = await Todo.find({});
       const maxPriority = existingTodos.length ? Math.max(...existingTodos.map(todo => todo.priority)) : 0;
 
@@ -29,7 +34,7 @@ const handler = async (req, res) => {
         await Todo.updateMany({ priority: { $gte: priority } }, { $inc: { priority: 1 } });
       }
 
-      const newTodo = new Todo({ title, percentage, priority });
+      const newTodo = new Todo({ title, percentage, priority, category, isColorful });
       await newTodo.save();
       res.status(201).json(newTodo);
     } catch (error) {

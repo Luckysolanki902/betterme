@@ -1,4 +1,4 @@
-// @pages/api/todos/[id].js
+// pages/api/todos/[id].js
 import connectToMongo from '@/middleware/connectToMongo';
 import Todo from '@/models/Todo';
 
@@ -7,7 +7,12 @@ const handler = async (req, res) => {
 
   if (req.method === 'PUT') {
     try {
-      const { title, percentage, priority } = req.body;
+      const { title, percentage, priority, category, isColorful } = req.body;
+
+      if (!category) {
+        return res.status(400).json({ message: 'Category is required' });
+      }
+
       const todo = await Todo.findById(id);
 
       if (todo) {
@@ -26,7 +31,7 @@ const handler = async (req, res) => {
           }
         }
 
-        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, percentage, priority }, { new: true });
+        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, percentage, priority, category, isColorful }, { new: true });
         res.status(200).json(updatedTodo);
       } else {
         res.status(404).json({ message: 'Todo not found' });
