@@ -169,7 +169,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                                       color: isCompleted ? 'green' : 'gray',
                                     }}
                                   >
-                                    {(todo.percentage * 100).toFixed(2)}%
+                                    {(todo.percentage).toFixed(2)}%
                                   </Typography>
                                 </Box>
                                 <Checkbox
@@ -244,7 +244,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                                 color: isCompleted ? 'green' : 'gray',
                               }}
                             >
-                              {(todo.percentage * 100).toFixed(2)}%
+                              {(todo.percentage).toFixed(2)}%
                             </Typography>
                           </Box>
                           <Checkbox
