@@ -13,7 +13,7 @@ const TodoSchema = new mongoose.Schema(
     completed: { type: Boolean, default: false },
     priority: { type: Number, default: 0 }, // Default priority
     isColorful: { type: Boolean, default: false }, // New field
-    category: { type: String, required: true }, // New field
+    category: { type: String, required: true, index: true }, // New field
   },
   { timestamps: true } // Enable automatic createdAt and updatedAt fields
 );

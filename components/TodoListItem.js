@@ -1,5 +1,5 @@
 // components/TodoListItem.js
-import { ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box } from '@mui/material';
+import { ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Box, Chip } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 
 // Custom style for the priority badge
@@ -25,18 +25,44 @@ const PriorityBadge = ({ priority }) => (
 );
 
 const TodoListItem = ({ todo, handleEdit, handleDeleteClick }) => (
-  <ListItem key={todo._id} divider sx={{ display: 'flex', alignItems: 'center', p: 2, bgcolor: 'background.paper' }}>
+  <ListItem 
+    divider 
+    sx={{ display: 'flex', alignItems: 'center', p: 2, bgcolor: 'background.paper' }}
+  >
     <PriorityBadge priority={todo.priority} />
     <ListItemText
       primary={
-        <Typography variant="h6" component="div" sx={{ fontFamily: 'Poppins', fontWeight: 400, wordBreak: 'break-word' }}>
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            fontFamily: 'Poppins', 
+            fontWeight: 400, 
+            wordBreak: 'break-word',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
           {todo.title}
+          {todo.category && (
+            <Chip 
+              label={todo.category} 
+              // color="secondary" 
+              size="small" 
+              sx={{ ml: 1 }}
+            />
+          )}
         </Typography>
       }
       secondary={
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="body2" component="div" sx={{ fontFamily: 'Poppins', color: 'text.secondary' }}>
-            Percentage: {todo.percentage}%
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+          <Typography 
+            variant="body2" 
+            component="div" 
+            sx={{ fontFamily: 'Poppins', color: 'text.secondary' }}
+          >
+            Percentage: {(todo.percentage * 100).toFixed(2)}%
           </Typography>
           <Box>
             <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(todo)} >

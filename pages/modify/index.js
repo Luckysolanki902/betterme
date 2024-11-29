@@ -3,10 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Container, TextField, Button, List, Typography, Box, Dialog, 
   DialogActions, DialogContent, DialogContentText, DialogTitle, 
-  Skeleton, Alert, Checkbox, FormControlLabel, Autocomplete, 
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction
+  Skeleton, Alert, Checkbox, FormControlLabel, Autocomplete
 } from '@mui/material';
 import Dashboard from '@/components/Dashboard';
 import TodoListItem from '@/components/TodoListItem';
@@ -229,38 +226,32 @@ const AdminPanel = () => {
       <List sx={{ maxHeight: '23rem', overflow: 'auto' }}>
         {isLoading ? (
           Array.from({ length: 20 }).map((_, index) => (
-            <ListItem key={index} divider>
-              <ListItemText
-                primary={<Skeleton variant="text" width={100} />}
-                secondary={<Skeleton variant="text" width={50} />}
-              />
-              <ListItemSecondaryAction>
-                <Skeleton variant="circular" width={40} height={40} />
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))
-        ) : (
-          // Group todos by category
-          categories.map((category) => {
-            const todosInCategory = todos.filter(todo => todo.category === category);
-            if (todosInCategory.length === 0) return null;
-
-            return (
-              <Box key={category} sx={{ mb: 2 }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  {category}
-                </Typography>
-                {todosInCategory.map((todo) => (
-                  <TodoListItem
-                    key={todo._id}
-                    todo={todo}
-                    handleEdit={handleEdit}
-                    handleDeleteClick={handleDeleteClick}
-                  />
-                ))}
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
+              <Skeleton variant="rectangular" width={40} height={40} sx={{ mr: 2 }} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="60%" />
+                <Skeleton variant="text" width="40%" />
               </Box>
-            );
-          })
+              <Box>
+                <Skeleton variant="circular" width={40} height={40} />
+                <Skeleton variant="circular" width={40} height={40} sx={{ mt: 1 }} />
+              </Box>
+            </Box>
+          ))
+        ) : todos.length === 0 ? (
+          <Typography variant="body1" color="text.secondary">
+            No todos available.
+          </Typography>
+        ) : (
+          // Render Todos in Order
+          todos.map((todo) => (
+            <TodoListItem
+              key={todo._id}
+              todo={todo}
+              handleEdit={handleEdit}
+              handleDeleteClick={handleDeleteClick}
+            />
+          ))
         )}
       </List>
 

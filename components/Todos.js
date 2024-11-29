@@ -8,7 +8,9 @@ import {
   Box,
   Skeleton,
   TextField,
-  Divider,
+  Chip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import { useSpring, animated } from 'react-spring';
 import debounce from 'lodash/debounce';
@@ -21,9 +23,26 @@ const generatePastelColor = () => {
   return `hsl(${hue}, ${saturation}%, 90%)`;
 };
 
+// Memoize category colors to maintain consistency
+const useCategoryColors = (todos) => {
+  return useMemo(() => {
+    const categoryColorMap = {};
+    todos.forEach((todo) => {
+      if (todo.category && !categoryColorMap[todo.category]) {
+        categoryColorMap[todo.category] = generatePastelColor();
+      }
+    });
+    return categoryColorMap;
+  }, [todos]);
+};
+
 const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
   const props = useSpring({ opacity: 1, from: { opacity: 0 }, config: { duration: 500 } });
   const [searchTerm, setSearchTerm] = useState('');
+  const [isGrouped, setIsGrouped] = useState(false); // New state for grouping
+
+  // Generate consistent colors for categories
+  const categoryColors = useCategoryColors(todos);
 
   // Debounced search handler to optimize performance
   const handleSearchChange = useCallback(
@@ -60,19 +79,30 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Search Bar */}
-      <TextField
-        label="Search Todos"
-        variant="outlined"
-        fullWidth
-        onChange={handleSearchChange}
-        sx={{ marginBottom: 2 }}
-      />
+      {/* Search Bar and Toggle */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <TextField
+          label="Search Todos"
+          variant="outlined"
+          fullWidth
+          onChange={handleSearchChange}
+          sx={{ marginBottom: 2, flex: 1, mr: 2 }}
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isGrouped}
+              onChange={() => setIsGrouped((prev) => !prev)}
+              color="primary"
+            />
+          }
+          label="Group by Category"
+        />
+      </Box>
 
       {/* Todo List */}
-      <Box sx={{maxHeight: '400px', overflowY:'auto'}}>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {isLoading ? (
             // Loading Skeletons
             Array.from({ length: 10 }).map((_, index) => (
@@ -90,79 +120,157 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                 </Card>
               </animated.div>
             ))
-          ) : sortedCategories.length === 0 ? (
+          ) : isGrouped ? (
+            // Grouped View
+            sortedCategories.length === 0 ? (
+              <Typography variant="body1" color="text.secondary">
+                No todos found.
+              </Typography>
+            ) : (
+              sortedCategories.map((category) => (
+                <Box key={category}>
+                  {/* Category Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Chip
+                      label={category}
+                      color="secondary"
+                      variant="filled"
+                      size="medium"
+                      sx={{
+                        fontSize: '1rem',
+                        backgroundColor: 'rgb(250, 250, 250)',
+                        color: 'black',
+                      }}
+                    />
+                  </Box>
+                  {/* Todos Under Category */}
+                  {groupedTodos[category].map((todo) => {
+                    const isCompleted = completedTodos.includes(todo._id);
+                    const backgroundColor = todo.isColorful ? categoryColors[todo.category] : 'inherit';
+
+                    return (
+                      <animated.div key={todo._id} style={props}>
+                        <Card
+                          sx={{
+                            backgroundColor: backgroundColor,
+                            transition: 'background-color 0.3s ease',
+                          }}
+                        >
+                          <CardContent>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              {/* Todo Title and Checkbox */}
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                  <Typography
+                                    variant="h6"
+                                    sx={{
+                                      fontWeight: 500,
+                                      wordBreak: 'break-word',
+                                      textDecoration: isCompleted ? 'line-through' : 'none',
+                                      color: isCompleted ? 'text.secondary' : 'text.primary',
+                                    }}
+                                  >
+                                    {todo.title}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      color: isCompleted ? 'green' : 'gray',
+                                    }}
+                                  >
+                                    {(todo.percentage * 100).toFixed(2)}%
+                                  </Typography>
+                                </Box>
+                                <Checkbox
+                                  checked={isCompleted}
+                                  onChange={() => handleToggleTodo(todo._id)}
+                                  color="primary"
+                                />
+                              </Box>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </animated.div>
+                    );
+                  })}
+                </Box>
+              ))
+            )
+          ) : filteredTodos.length === 0 ? (
             // No Todos Found
             <Typography variant="body1" color="text.secondary">
               No todos found.
             </Typography>
           ) : (
-            // Render Todos Grouped by Category
-            sortedCategories.map((category) => (
-              <Box key={category}>
-                {/* Category Header */}
-                <Typography
-                  variant="h6"
-                  sx={{
-                    marginBottom: 1,
-                    color: 'black', // MUI primary color shade
-                  }}
-                >
-                  {category}
-                </Typography>
-                <Divider sx={{ marginBottom: 2 }} />
+            // Ungrouped View: Render Todos in Order
+            filteredTodos.map((todo) => {
+              const isCompleted = completedTodos.includes(todo._id);
+              const backgroundColor = todo.isColorful ? categoryColors[todo.category] : 'inherit';
 
-                {/* Todos Under Category */}
-                {groupedTodos[category].map((todo) => {
-                  const isCompleted = completedTodos.includes(todo._id);
-                  const backgroundColor = todo.isColorful ? generatePastelColor() : 'inherit';
+              return (
+                <animated.div key={todo._id} style={props}>
+                  <Card
+                    sx={{
+                      backgroundColor: backgroundColor,
+                      transition: 'background-color 0.3s ease',
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {/* Category Chip */}
+                        {todo.category && (
+                          <Chip
+                            label={todo.category}
+                            // color="secondary"
+                            variant="filled"
+                            size="small"
+                            sx={{
+                              alignSelf: 'flex-start',
+                              // fontWeight: 'bold',
+                              fontSize: '0.875rem',
+                              backgroundColor: 'rgb(250, 250, 250)', 
+                            }}
+                          />
+                        )}
 
-                  return (
-                    <animated.div key={todo._id} style={props}>
-                      <Card
-                        sx={{
-                          backgroundColor: backgroundColor,
-                          transition: 'background-color 0.3s ease',
-                          marginBottom: '2rem',
-                        }}
-                      >
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box>
-                              <Typography
-                                variant="h6"
-                                sx={{
-                                  fontWeight: 500,
-                                  wordBreak: 'break-word',
-                                }}
-                              >
-                                {todo.title}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: isCompleted ? 'green' : 'gray',
-                                }}
-                              >
-                                {(todo.percentage * 100).toFixed(2)}%
-                              </Typography>
-                            </Box>
-                            <Checkbox
-                              checked={isCompleted}
-                              onChange={() => handleToggleTodo(todo._id)}
-                              color="primary"
-                            />
+                        {/* Todo Title and Checkbox */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontWeight: 500,
+                                wordBreak: 'break-word',
+                                textDecoration: isCompleted ? 'line-through' : 'none',
+                                color: isCompleted ? 'text.secondary' : 'text.primary',
+                              }}
+                            >
+                              {todo.title}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: isCompleted ? 'green' : 'gray',
+                              }}
+                            >
+                              {(todo.percentage * 100).toFixed(2)}%
+                            </Typography>
                           </Box>
-                        </CardContent>
-                      </Card>
-                    </animated.div>
-                  );
-                })}
-              </Box>
-            ))
+                          <Checkbox
+                            checked={isCompleted}
+                            onChange={() => handleToggleTodo(todo._id)}
+                            color="primary"
+                          />
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </animated.div>
+              );
+            })
           )}
         </Box>
       </Box>
-
     </Box>
   );
 };
