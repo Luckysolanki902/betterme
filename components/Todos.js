@@ -86,7 +86,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
           variant="outlined"
           fullWidth
           onChange={handleSearchChange}
-          sx={{ marginBottom: 2, flex: 1, mr: 2 }}
+          sx={{ marginBottom: 2, flex: 1}}
         />
 
       </Box>
