@@ -88,16 +88,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
           onChange={handleSearchChange}
           sx={{ marginBottom: 2, flex: 1, mr: 2 }}
         />
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isGrouped}
-              onChange={() => setIsGrouped((prev) => !prev)}
-              color="primary"
-            />
-          }
-          label="Group by Category"
-        />
+
       </Box>
 
       {/* Todo List */}
@@ -271,6 +262,19 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
           )}
         </Box>
       </Box>
+
+      <FormControlLabel
+            sx={{mt:5}}
+
+          control={
+            <Switch
+              checked={isGrouped}
+              onChange={() => setIsGrouped((prev) => !prev)}
+              color="primary"
+            />
+          }
+          label="Group By Category"
+        />
     </Box>
   );
 };
