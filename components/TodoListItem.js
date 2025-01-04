@@ -33,14 +33,15 @@ const TodoListItem = ({ todo, handleEdit, handleDeleteClick }) => (
     <ListItemText
       primary={
         <Typography 
-          variant="h6" 
+          variant="body1" 
           component="div" 
           sx={{ 
             fontFamily: 'Poppins', 
             fontWeight: 400, 
-            wordBreak: 'break-word',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection:'column',
+            alignItems: 'flex-start',
+            justifyContent:'center',
             gap: 1
           }}
         >
@@ -50,7 +51,7 @@ const TodoListItem = ({ todo, handleEdit, handleDeleteClick }) => (
               label={todo.category} 
               // color="secondary" 
               size="small" 
-              sx={{ ml: 1 }}
+              sx={{ ml: 0, borderRadius:'0.5rem', fontSize:'0.7rem' }}
             />
           )}
         </Typography>
@@ -62,7 +63,7 @@ const TodoListItem = ({ todo, handleEdit, handleDeleteClick }) => (
             component="div" 
             sx={{ fontFamily: 'Poppins', color: 'text.secondary' }}
           >
-            Percentage: {(todo.percentage * 100).toFixed(2)}%
+            Percentage: {(todo.percentage).toFixed(2)}%
           </Typography>
           <Box>
             <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(todo)} >

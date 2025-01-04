@@ -215,10 +215,10 @@ const AdminPanel = () => {
           Count: {totalTodos}
         </Typography>
         <Typography className='pop' variant="body1">
-          Total: {(totalPercentage * 100).toFixed(2)}%
+          Total: {(totalPercentage).toFixed(2)}%
         </Typography>
         <Typography className='pop' variant="body1">
-          Avg: {(averagePercentage * 100).toFixed(2)}%
+          Avg: {(averagePercentage * 1).toFixed(2)}%
         </Typography>
       </Box>
 
@@ -278,7 +278,9 @@ const AdminPanel = () => {
           <Button 
             onClick={handleDeleteConfirm} 
             color="warning" 
-            disabled={deleteConfirmText !== 'delete'}
+            size='small'
+            variant="contained"
+            disabled={deleteConfirmText.trim() !== 'delete'}
           >
             Delete
           </Button>

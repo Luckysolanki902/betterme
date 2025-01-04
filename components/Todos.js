@@ -86,7 +86,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
           variant="outlined"
           fullWidth
           onChange={handleSearchChange}
-          sx={{ marginBottom: 2, flex: 1}}
+          sx={{ marginBottom: 2, flex: 1 }}
         />
 
       </Box>
@@ -122,18 +122,16 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                 <Box key={category}>
                   {/* Category Header */}
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      label={category}
-                      color="secondary"
-                      variant="filled"
-                      size="medium"
+                    <Box
+           
                       sx={{
                         fontSize: '1rem',
-                        backgroundColor: 'rgb(250, 250, 250)',
                         color: 'black',
+                        padding:'2rem 0.2rem'
                       }}
                     />
-                  </Box>
+                    {category}
+                  </Box >
                   {/* Todos Under Category */}
                   {groupedTodos[category].map((todo) => {
                     const isCompleted = completedTodos.includes(todo._id);
@@ -145,6 +143,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                           sx={{
                             backgroundColor: backgroundColor,
                             transition: 'background-color 0.3s ease',
+                            mb: '1rem'
                           }}
                         >
                           <CardContent>
@@ -209,7 +208,7 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                     <CardContent>
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         {/* Category Chip */}
-                        {todo.category && (
+                        {/* {todo.category && (
                           <Chip
                             label={todo.category}
                             // color="secondary"
@@ -219,10 +218,10 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
                               alignSelf: 'flex-start',
                               // fontWeight: 'bold',
                               fontSize: '0.875rem',
-                              backgroundColor: 'rgb(250, 250, 250)', 
+                              backgroundColor: 'rgb(250, 250, 250)',
                             }}
                           />
-                        )}
+                        )} */}
 
                         {/* Todo Title and Checkbox */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -264,17 +263,17 @@ const Todos = ({ todos, completedTodos, handleToggleTodo, isLoading }) => {
       </Box>
 
       <FormControlLabel
-            sx={{mt:5}}
+        sx={{ mt: 5 }}
 
-          control={
-            <Switch
-              checked={isGrouped}
-              onChange={() => setIsGrouped((prev) => !prev)}
-              color="primary"
-            />
-          }
-          label="Group By Category"
-        />
+        control={
+          <Switch
+            checked={isGrouped}
+            onChange={() => setIsGrouped((prev) => !prev)}
+            color="primary"
+          />
+        }
+        label="Group By Category"
+      />
     </Box>
   );
 };

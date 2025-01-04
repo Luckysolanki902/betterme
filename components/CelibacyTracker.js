@@ -42,6 +42,7 @@ function formatDate(date) {
 }
 
 const CelibacyTracker = () => {
+  const startDate = useStartDate();
   const [dailyRecords, setDailyRecords] = useState([]);
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
   const [selectedDate, setSelectedDate] = useState(dayjs()); // Initialize with current date
@@ -51,7 +52,6 @@ const CelibacyTracker = () => {
   const [headingDate, setHeadingDate] = useState(new Date());
   const today = new Date();
   const isSmallScreen = useMediaQuery('(max-width: 600px)');
-  const [startDate, setStartDate] = useState(new Date());
   const [totalDaysSinceStart, setTotalDaysSinceStart] = useState(0); // For overall days since the earliest level
 
   const fetchRecords = async (year, month) => {
@@ -64,6 +64,10 @@ const CelibacyTracker = () => {
       console.error(error);
     }
   };
+  useEffect(() => {
+    const diffInDays = differenceInDays(new Date(), startDate) + 1;
+    setTotalDaysSinceStart(diffInDays);
+  }, [startDate])
 
   const fetchLevels = async () => {
     const res = await fetch('/api/levels');
@@ -74,11 +78,10 @@ const CelibacyTracker = () => {
   const calculateTotalDaysSinceStart = (levelsData) => {
     if (levelsData.length > 0) {
       const earliestStartDate = new Date(levelsData[0].startDate);
-      setStartDate(earliestStartDate)
       const currentDate = new Date();
       const diffInTime = currentDate - earliestStartDate;
       const diffInDays = Math.floor(diffInTime / (1000 * 60 * 60 * 24));
-      setTotalDaysSinceStart(diffInDays + 1); // Include today
+      setTotalDaysSinceStart(diffInDays + 1);
     }
   };
 
@@ -142,7 +145,6 @@ const CelibacyTracker = () => {
   };
 
   const todayD = new Date();
-  const dayCount = differenceInDays(todayD, startDate) + 1;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
