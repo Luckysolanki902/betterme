@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
     "next": "latest",
+    "nodemailer": "^7.0.3",
     "react": "latest",
     "react-countup": "^6.5.3",
     "react-dom": "latest",

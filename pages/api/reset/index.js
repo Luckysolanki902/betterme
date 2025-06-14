@@ -2,22 +2,27 @@
 
 import connectToMongo from '@/middleware/connectToMongo';
 import Config from '@/models/Config';
-import MonthlyCelibacyRecord from '@/models/MonthlyCelibacyRecord';
+import DailyCompletion from '@/models/DailyCompletion';
+import Todo from '@/models/Todo';
 
 const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
-      // Delete all existing MonthlyCelibacyRecord documents
-      await MonthlyCelibacyRecord.deleteMany({});
+      // Delete all existing DailyCompletion documents
+      await DailyCompletion.deleteMany({});
+      
+      // Reset completion status for all todos
+      await Todo.updateMany({}, { completed: false });
       
       // Delete all existing Config documents
       await Config.deleteMany({});
 
-      // Create a new Config document with today's date and totalPercentage set to 0
+      // Create a new Config document with initial values
       const newConfig = new Config({
-        totalPercentage: 0,
-        startDate: new Date(), // Sets the startDate to the current date and time
-        // categories will use the default value defined in the schema
+        totalScore: 0,
+        totalPossibleScore: 0,
+        startDate: new Date(),
+        scoresByDay: new Map(),
       });
 
       // Save the new Config document to the database
