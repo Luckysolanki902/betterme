@@ -7,10 +7,14 @@ const handler = async (req, res) => {
 
   if (req.method === 'PUT') {
     try {
-      const { title, percentage, priority, category, isColorful } = req.body;
+      const { title, difficulty, priority, category, isColorful } = req.body;
 
       if (!category) {
         return res.status(400).json({ message: 'Category is required' });
+      }
+
+      if (!difficulty) {
+        return res.status(400).json({ message: 'Difficulty is required' });
       }
 
       const todo = await Todo.findById(id);
@@ -18,6 +22,28 @@ const handler = async (req, res) => {
       if (todo) {
         if (priority < 1) {
           return res.status(400).json({ message: 'Priority must be at least 1' });
+        }
+
+        // Calculate score based on difficulty
+        let score;
+        switch (difficulty) {
+          case 'easy':
+            score = 1;
+            break;
+          case 'light':
+            score = 3;
+            break;
+          case 'medium':
+            score = 5;
+            break;
+          case 'challenging':
+            score = 7;
+            break;
+          case 'hard':
+            score = 10;
+            break;
+          default:
+            score = 5; // Default to medium if somehow not specified
         }
 
         // Adjust priorities
@@ -31,7 +57,7 @@ const handler = async (req, res) => {
           }
         }
 
-        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, percentage, priority, category, isColorful }, { new: true });
+        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, difficulty, score, priority, category, isColorful }, { new: true });
         res.status(200).json(updatedTodo);
       } else {
         res.status(404).json({ message: 'Todo not found' });

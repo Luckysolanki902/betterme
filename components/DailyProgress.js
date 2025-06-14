@@ -55,7 +55,7 @@ const DailyProgress = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDateContext]); // Re-fetch data if startDateContext changes
 
-  // Function to fill missing dates with 0% data and ensure the range extends to today
+  // Function to fill missing dates with 0 score data and ensure the range extends to today
   const fillMissingDates = (apiData) => {
     if (apiData.length === 0) return [];
 
@@ -74,15 +74,27 @@ const DailyProgress = () => {
     const dataMap = new Map();
     sortedData.forEach((item) => {
       const formattedDate = format(parseISO(item.date), 'yyyy-MM-dd');
-      dataMap.set(formattedDate, item.percentage);
+      dataMap.set(formattedDate, {
+        score: item.score || 0,
+        totalPossibleScore: item.totalPossibleScore || 0
+      });
     });
 
-    // Fill missing dates with 0% for days not in the API data
+    // Fill missing dates with 0 for days not in the API data
     const filledData = allDates.map((date) => {
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const dayData = dataMap.has(formattedDate) ? dataMap.get(formattedDate) : { score: 0, totalPossibleScore: 0 };
+      
+      // Calculate daily improvement percentage
+      const dailyImprovement = dayData.totalPossibleScore > 0 
+        ? (dayData.score / dayData.totalPossibleScore) * 100 
+        : 0;
+      
       return {
         date: formattedDate,
-        percentage: dataMap.has(formattedDate) ? dataMap.get(formattedDate) : 0,
+        score: dayData.score,
+        totalPossibleScore: dayData.totalPossibleScore,
+        improvement: parseFloat(dailyImprovement.toFixed(1))
       };
     });
 
@@ -156,12 +168,20 @@ const DailyProgress = () => {
             tickFormatter={(value) => `${value}%`}
             tick={{ fontSize: '12px' }}
           />
-          <Tooltip formatter={(value) => `${value}%`} labelFormatter={(label) => formatXAxis(label)} />
+          <Tooltip 
+            formatter={(value, name) => {
+              if (name === 'improvement') return `${value}%`;
+              return value;
+            }} 
+            labelFormatter={(label) => formatXAxis(label)}
+            contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: '8px' }}
+          />
           <Line
             type="monotone"
-            dataKey="percentage"
+            dataKey="improvement"
+            name="Daily Improvement"
             stroke={theme.palette.primary.main}
-            dot={false} // Remove dots
+            dot={{ strokeWidth: 2, r: 4 }} // Add small dots for daily view
             strokeWidth={2}
             connectNulls
           />

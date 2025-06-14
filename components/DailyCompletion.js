@@ -1,24 +1,37 @@
 // components/TotalCompletion.js
 import React from 'react';
-import styles from './styles/DailyCompletion.module.css'; // Import the CSS Module
+import styles from './styles/DailyCompletion.module.css';
+import { Box, Typography, useTheme } from '@mui/material';
 
-const DailyCompletion = ({ percentageProp }) => {
-    const percentage = parseFloat(percentageProp) || 0;
-    // Format the percentage to always have 5 digits with 2 decimal places
-    let formattedPercentage
-    // formattedPercentage = percentage.toFixed(2).padStart(6, '0');
-    formattedPercentage = percentage.toFixed(2)
-    if (percentage == 0 || percentage == 0.0) {
-        formattedPercentage = '00.00';
-    }
-
+const DailyCompletion = ({ score = 0, totalPossibleScore = 0 }) => {
+    const theme = useTheme();
+    // Calculate the percentage based on score
+    const percentage = totalPossibleScore > 0 ? ((score / totalPossibleScore) * 100).toFixed(1) : '0.0';
+    
     return (
         <div className={styles.totalCompletionContainer} id={styles.totalCompletionContainer2}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem', textAlign:'center', width:'100%', display:'flex', justifyContent:'center' }}>
+            <Box sx={{ 
+                width: '100%', 
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
+            }}>
                 <div className={styles.totalCompletionNumber} id={styles.bigger}>
-                    {formattedPercentage}
+                    {percentage}%
                 </div>
-            </div>
+                <Typography 
+                    variant="body2" 
+                    sx={{ 
+                        color: theme.palette.text.secondary,
+                        fontWeight: 500
+                    }}
+                >
+                    Today's Score: {score}/{totalPossibleScore}
+                </Typography>
+            </Box>
         </div>
     );
 };

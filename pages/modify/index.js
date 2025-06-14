@@ -1,18 +1,35 @@
-// components/AdminPanel.js
+// pages/modify/index.js
 import React, { useState, useEffect } from 'react';
 import { 
-  Container, TextField, Button, List, Typography, Box, Dialog, 
+  TextField, Button, List, Typography, Box, Dialog, 
   DialogActions, DialogContent, DialogContentText, DialogTitle, 
-  Skeleton, Alert, Checkbox, FormControlLabel, Autocomplete
+  Skeleton, Alert, Checkbox, FormControlLabel, Autocomplete,
+  Paper, Divider, FormControl, InputLabel, Select, MenuItem
 } from '@mui/material';
-import Dashboard from '@/components/Dashboard';
+import Layout from '@/components/Layout';
 import TodoListItem from '@/components/TodoListItem';
+import EmptyState from '@/components/EmptyState';
 import axios from 'axios';
+
+// Difficulty score mapping
+const DIFFICULTY_SCORES = {
+  easy: 1,
+  light: 3,
+  medium: 5,
+  challenging: 7,
+  hard: 10
+};
 
 const AdminPanel = () => {
   const [todos, setTodos] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
+  const [form, setForm] = useState({ 
+    title: '', 
+    difficulty: 'medium',
+    priority: '', 
+    isColorful: false, 
+    category: '' 
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [currentTodoId, setCurrentTodoId] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -57,7 +74,7 @@ const AdminPanel = () => {
     try {
       const payload = { 
         title: form.title, 
-        percentage: parseFloat(form.percentage), 
+        difficulty: form.difficulty, 
         priority, 
         isColorful: form.isColorful,
         category: form.category,
@@ -72,7 +89,13 @@ const AdminPanel = () => {
       }
 
       fetchTodos();
-      setForm({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
+      setForm({ 
+        title: '', 
+        difficulty: 'medium', 
+        priority: '', 
+        isColorful: false, 
+        category: '' 
+      });
       setIsEditing(false);
       setCurrentTodoId(null);
     } catch (err) {
@@ -83,7 +106,7 @@ const AdminPanel = () => {
   const handleEdit = (todo) => {
     setForm({ 
       title: todo.title, 
-      percentage: todo.percentage, 
+      difficulty: todo.difficulty, 
       priority: todo.priority, 
       isColorful: todo.isColorful,
       category: todo.category,
@@ -117,116 +140,179 @@ const AdminPanel = () => {
   };
 
   const handleCancelEdit = () => {
-    setForm({ title: '', percentage: 0, priority: '', isColorful: false, category: '' });
+    setForm({ 
+      title: '', 
+      difficulty: 'medium', 
+      priority: '', 
+      isColorful: false, 
+      category: '' 
+    });
     setIsEditing(false);
     setCurrentTodoId(null);
   };
 
   const totalTodos = todos.length;
-  const totalPercentage = todos.reduce((sum, todo) => sum + todo.percentage, 0);
-  const averagePercentage = totalTodos ? (totalPercentage / totalTodos).toFixed(2) : 0;
-
+  const totalScore = todos.reduce((sum, todo) => sum + todo.score, 0);
+  const averageScore = totalTodos ? (totalScore / totalTodos).toFixed(1) : 0;
+  
   return (
-    <Container maxWidth="md">
-      <Typography className='pop' variant="h4" gutterBottom sx={{ mt: 4, mb: 2 }}>
-        Admin Panel
+    <Layout>
+      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        Modify Todos
       </Typography>
       
-      {/* Todo Form */}
-      <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3 }}>
-        <TextField
-          label="Title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          fullWidth
-          required
-          margin="normal"
-        />
-        <TextField
-          label="Percentage"
-          type="number"
-          value={form.percentage}
-          onChange={(e) => setForm({ ...form, percentage: parseFloat(e.target.value) })}
-          fullWidth
-          required
-          margin="normal"
-          InputProps={{ inputProps: { min: 0, max: 1, step: 0.01 } }}
-        />
-        <TextField
-          label="Priority"
-          type="number"
-          value={form.priority}
-          onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value, 10) })}
-          fullWidth
-          required
-          margin="normal"
-          InputProps={{ inputProps: { min: 1, step: 1 } }}
-        />
+      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
+        {/* Todo Form */}
+        <Typography variant="h6" gutterBottom>
+          {isEditing ? 'Edit Todo' : 'Create New Todo'}
+        </Typography>
+        <Divider sx={{ mb: 3 }} />
+        
+        <Box component="form" onSubmit={handleSubmit}>
+          <TextField
+            label="Title"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            fullWidth
+            required
+            margin="normal"
+            variant="outlined"
+          />
 
-        <Autocomplete
-          freeSolo
-          options={categories}
-          value={form.category}
-          onChange={(event, newValue) => {
-            setForm({ ...form, category: newValue });
-          }}
-          onInputChange={(event, newInputValue) => {
-            setForm({ ...form, category: newInputValue });
-          }}
-          renderInput={(params) => (
-            <TextField 
-              {...params} 
-              label="Category" 
-              margin="normal" 
-              required 
-            />
-          )}
-          sx={{ mb: 2 }}
-        />
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel id="difficulty-label">Difficulty</InputLabel>
+            <Select
+              labelId="difficulty-label"
+              value={form.difficulty}
+              label="Difficulty"
+              onChange={(e) => setForm({ ...form, difficulty: e.target.value })}
+            >
+              <MenuItem value="easy">Easy (1 point)</MenuItem>
+              <MenuItem value="light">Light (3 points)</MenuItem>
+              <MenuItem value="medium">Medium (5 points)</MenuItem>
+              <MenuItem value="challenging">Challenging (7 points)</MenuItem>
+              <MenuItem value="hard">Hard (10 points)</MenuItem>
+            </Select>
+          </FormControl>
 
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={form.isColorful}
-              onChange={(e) => setForm({ ...form, isColorful: e.target.checked })}
-              color="primary"
-              sx={{marginLeft:'0.5rem'}}
-            />
-          }
-          label="Colorful Background"
-        />
+          <TextField
+            label="Priority"
+            type="number"
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value, 10) })}
+            fullWidth
+            required
+            margin="normal"
+            variant="outlined"
+            InputProps={{ inputProps: { min: 1, step: 1 } }}
+            helperText="Lower number = higher priority"
+          />
 
-        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        <Box sx={{ mt: 2 }}>
-          <Button type="submit" variant="contained" color="primary" sx={{ mr: 2 }}>
-            {isEditing ? 'Update' : 'Add'} Todo
-          </Button>
-          {isEditing && (
-            <Button variant="outlined" color="secondary" onClick={handleCancelEdit}>
-              Cancel Edit
+          <Autocomplete
+            freeSolo
+            options={categories}
+            value={form.category}
+            onChange={(event, newValue) => {
+              setForm({ ...form, category: newValue });
+            }}
+            onInputChange={(event, newInputValue) => {
+              setForm({ ...form, category: newInputValue });
+            }}
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                label="Category" 
+                margin="normal" 
+                required 
+                variant="outlined"
+              />
+            )}
+            sx={{ mb: 2 }}
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={form.isColorful}
+                onChange={(e) => setForm({ ...form, isColorful: e.target.checked })}
+                color="primary"
+              />
+            }
+            label="Colorful Background"
+          />
+
+          {error && <Alert severity="error" sx={{ mt: 2, mb: 2 }}>{error}</Alert>}          
+          <Box sx={{ mt: 3 }}>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="primary" 
+              size="large"
+              sx={{ mr: 2 }}
+            >
+              {isEditing ? 'Update Todo' : 'Add Todo'}
             </Button>
-          )}
+            {isEditing && (
+              <Button 
+                variant="outlined" 
+                color="secondary" 
+                size="large"
+                onClick={handleCancelEdit}
+              >
+                Cancel Edit
+              </Button>
+            )}
+          </Box>
         </Box>
-      </Box>
+      </Paper>
 
       {/* Statistics */}
-      <Box mb={3} sx={{ display: 'flex', justifyContent: 'space-around' }}>
-        <Typography className='pop' variant="body1">
-          Count: {totalTodos}
+      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Todo Statistics
         </Typography>
-        <Typography className='pop' variant="body1">
-          Total: {(totalPercentage).toFixed(2)}%
-        </Typography>
-        <Typography className='pop' variant="body1">
-          Avg: {(averagePercentage * 1).toFixed(2)}%
-        </Typography>
-      </Box>
+        <Divider sx={{ mb: 2 }} />
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ textAlign: 'center', p: 1, minWidth: '100px' }}>
+            <Typography variant="h5" color="primary">
+              {totalTodos}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total Todos
+            </Typography>
+          </Box>
+          
+          <Box sx={{ textAlign: 'center', p: 1, minWidth: '100px' }}>
+            <Typography variant="h5" color="primary">
+              {totalScore}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total Points
+            </Typography>
+          </Box>
+          
+          <Box sx={{ textAlign: 'center', p: 1, minWidth: '100px' }}>
+            <Typography variant="h5" color="primary">
+              {averageScore}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Average Points
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
 
       {/* Todo List */}
-      <List sx={{ maxHeight: '23rem', overflow: 'auto' }}>
+      <Paper elevation={1} sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Todo List
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        
         {isLoading ? (
-          Array.from({ length: 20 }).map((_, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center', p: 2 }}>
+          Array.from({ length: 5 }).map((_, index) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', p: 2, mb: 1 }}>
               <Skeleton variant="rectangular" width={40} height={40} sx={{ mr: 2 }} />
               <Box sx={{ flex: 1 }}>
                 <Skeleton variant="text" width="60%" />
@@ -239,21 +325,20 @@ const AdminPanel = () => {
             </Box>
           ))
         ) : todos.length === 0 ? (
-          <Typography variant="body1" color="text.secondary">
-            No todos available.
-          </Typography>
+          <EmptyState type="todos" />
         ) : (
-          // Render Todos in Order
-          todos.map((todo) => (
-            <TodoListItem
-              key={todo._id}
-              todo={todo}
-              handleEdit={handleEdit}
-              handleDeleteClick={handleDeleteClick}
-            />
-          ))
+          <List sx={{ maxHeight: '500px', overflow: 'auto' }}>
+            {todos.map((todo) => (
+              <TodoListItem
+                key={todo._id}
+                todo={todo}
+                handleEdit={handleEdit}
+                handleDeleteClick={handleDeleteClick}
+              />
+            ))}
+          </List>
         )}
-      </List>
+      </Paper>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={openDialog} onClose={handleDeleteCancel}>
@@ -286,10 +371,7 @@ const AdminPanel = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Dashboard */}
-      <Dashboard currentPage={'modify'} />
-    </Container>
+    </Layout>
   );
 };
 

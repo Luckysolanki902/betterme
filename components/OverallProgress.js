@@ -46,7 +46,7 @@ const OverallProgress = () => {
     // Re-fetch data if startDateContext changes
   }, [startDateContext]);
 
-  // Function to fill missing dates with 0% data and ensure the range extends to today
+  // Function to fill missing dates with 0 score data and ensure the range extends to today
   const fillMissingDates = (apiData) => {
     if (apiData.length === 0) return [];
 
@@ -69,36 +69,53 @@ const OverallProgress = () => {
     const dataMap = new Map();
     apiData.forEach((item) => {
       const formattedDate = format(parseISO(item.date), 'yyyy-MM-dd');
-      dataMap.set(formattedDate, item.percentage);
+      dataMap.set(formattedDate, {
+        score: item.score || 0,
+        totalPossibleScore: item.totalPossibleScore || 0
+      });
     });
 
-    // Fill missing dates with 0% for days not in the API data
+    // Fill missing dates with 0 for days not in the API data
     const filledData = allDates.map((date) => {
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const dayData = dataMap.has(formattedDate) ? dataMap.get(formattedDate) : { score: 0, totalPossibleScore: 0 };
+      
       return {
         date: formattedDate,
-        percentage: dataMap.has(formattedDate) ? dataMap.get(formattedDate) : 0,
+        score: dayData.score,
+        totalPossibleScore: dayData.totalPossibleScore,
+        // Calculate improvement percentage for the day
+        improvement: dayData.totalPossibleScore > 0 ? (dayData.score / dayData.totalPossibleScore) * 100 : 0,
       };
     });
 
     return filledData;
   };
 
-  // Function to calculate cumulative percentage
+  // Function to calculate cumulative score and improvement
   const calculateCumulativeData = (filledData) => {
-    let cumulativePercentage = 0;
+    let cumulativeScore = 0;
+    let cumulativeTotalPossible = 0;
     return filledData.map((item) => {
-      cumulativePercentage += item.percentage;
+      cumulativeScore += item.score;
+      cumulativeTotalPossible += item.totalPossibleScore;
+      
+      const cumulativeImprovement = cumulativeTotalPossible > 0 
+        ? (cumulativeScore / cumulativeTotalPossible) * 100 
+        : 0;
+        
       return {
         ...item,
-        cumulativePercentage: parseFloat(cumulativePercentage.toFixed(2)), // Round to 2 decimal places
+        cumulativeScore,
+        cumulativeTotalPossible,
+        cumulativeImprovement: parseFloat(cumulativeImprovement.toFixed(2)),
       };
     });
   };
 
   // Function to determine Y-axis domain based on data
   const getYAxisDomain = () => {
-    const maxValue = Math.max(...data.map((item) => item.cumulativePercentage), 0);
+    const maxValue = Math.max(...data.map((item) => item.cumulativeImprovement), 0);
     return Math.ceil(maxValue / 10) * 10 || 10; // Ensure at least 10
   };
 
@@ -140,12 +157,17 @@ const OverallProgress = () => {
             tick={{ fontSize: '12px' }}
           />
           <Tooltip
-            formatter={(value) => `${value}%`}
+            formatter={(value, name) => {
+              if (name === 'cumulativeImprovement') return `${value}%`;
+              return value;
+            }}
             labelFormatter={(label) => formatXAxis(label)}
+            contentStyle={{ backgroundColor: theme.palette.background.paper, borderRadius: '8px' }}
           />
           <Line
             type="monotone" // Smooth line
-            dataKey="cumulativePercentage"
+            dataKey="cumulativeImprovement"
+            name="Improvement"
             stroke={theme.palette.primary.main}
             dot={false} // Remove dots for cleaner graph
             strokeWidth={2}

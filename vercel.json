@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "next.config.mjs",
+      "use": "@vercel/next"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/mail-notifier",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/mail-notifier",
+      "schedule": "0 21 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/cron/mail-notifier",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET"
+        }
+      ]
+    }
+  ]
+}

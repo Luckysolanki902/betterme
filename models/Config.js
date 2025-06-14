@@ -2,7 +2,8 @@
 import mongoose from 'mongoose';
 
 const ConfigSchema = new mongoose.Schema({
-  totalPercentage: { type: Number, default: 0 },
+  totalScore: { type: Number, default: 0 },
+  totalPossibleScore: { type: Number, default: 0 },
   startDate: { type: Date, default: null },
   categories: {
     type: [String],
@@ -19,8 +20,15 @@ const ConfigSchema = new mongoose.Schema({
       "Self-Care & Hygiene",
       "Time Management"
     ]
-
   },
+  scoresByDay: {
+    type: Map,
+    of: {
+      score: Number,
+      totalPossible: Number
+    },
+    default: {}
+  }
 });
 
 const Config = mongoose.models.Config || mongoose.model('Config', ConfigSchema);

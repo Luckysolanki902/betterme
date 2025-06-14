@@ -4,11 +4,17 @@ import mongoose from 'mongoose';
 const TodoSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-    percentage: { 
-      type: Number, 
+    difficulty: { 
+      type: String, 
+      required: true,
+      enum: ['easy', 'light', 'medium', 'challenging', 'hard'],
+      default: 'medium'
+    },
+    score: { 
+      type: Number,
       required: true, 
-      min: [0, 'Percentage must be at least 0'], 
-      max: [1, 'Percentage must be at most 1'] // Corrected max value
+      min: [1, 'Score must be at least 1'],
+      max: [10, 'Score must be at most 10']
     },
     completed: { type: Boolean, default: false },
     priority: { type: Number, default: 0 }, // Default priority

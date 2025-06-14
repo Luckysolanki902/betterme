@@ -7,7 +7,7 @@ const DailyCompletion = ({ percentageProp }) => {
     // Format the percentage to always have 5 digits with 2 decimal places
     let formattedPercentage
     // formattedPercentage = percentage.toFixed(2).padStart(6, '0');
-    formattedPercentage = percentage.toFixed(2)
+    formattedPercentage = percentage?.toFixed(2)
     if (percentage == 0 || percentage == 0.0) {
         formattedPercentage = '00.00';
     }
