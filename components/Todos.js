@@ -37,16 +37,30 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
   
   // Get unique categories for filtering
   const uniqueCategories = ['all', ...new Set(todos.map(todo => todo.category).filter(Boolean))];
+    // Calculate scores with null checks
+  const totalScore = todos?.reduce((acc, todo) => {
+    // Ensure todo and score are valid
+    if (!todo || typeof todo.score !== 'number') return acc;
+    return acc + todo.score;
+  }, 0) || 0;
   
-  // Calculate scores
-  const totalScore = todos.reduce((acc, todo) => acc + todo.score, 0);
   const completedScore = todos
-    .filter(todo => completedTodos.includes(todo._id))
-    .reduce((acc, todo) => acc + todo.score, 0);
+    ?.filter(todo => todo && todo._id && completedTodos?.includes(todo._id))
+    .reduce((acc, todo) => {
+      // Ensure todo and score are valid
+      if (!todo || typeof todo.score !== 'number') return acc;
+      return acc + todo.score;
+    }, 0) || 0;
+    
   const scorePercentage = totalScore > 0 ? Math.round((completedScore / totalScore) * 100) : 0;
-  
-  // Filter todos based on search and category
+    // Filter todos based on search and category
   const filteredTodos = todos?.filter(todo => {
+    // Defensive check to ensure todo has required properties
+    if (!todo || !todo.title) {
+      console.warn('Invalid todo object:', todo);
+      return false;
+    }
+    
     const matchesSearch = 
       todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (todo.category && todo.category.toLowerCase().includes(searchQuery.toLowerCase()));

@@ -6,9 +6,11 @@ import Config from '@/models/Config';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { getAdjustedDateString } from '@/utils/streakUtils';
 import mongoose from 'mongoose';
+import { decryptArray, ENCRYPTED_FIELDS } from '@/utils/encryption';
+import { getUserId } from '@/middleware/encryption';
 
-const handler = async (req, res) => {
-  if (req.method === 'GET') {    try {
+const handler = async (req, res) => {  if (req.method === 'GET') {    try {
+      const userId = getUserId(req);
       const { date } = req.query;
       // Use adjusted date logic if no date provided
       const selectedDate = date || getAdjustedDateString();
@@ -28,8 +30,10 @@ const handler = async (req, res) => {
         });
       }
       
-      return res.status(200).json({
-        completedTodos: dailyCompletion.completedTodos,
+      // Decrypt the completed todos
+      const decryptedTodos = decryptArray(dailyCompletion.completedTodos, ENCRYPTED_FIELDS.TODO, userId);
+        return res.status(200).json({
+        completedTodos: decryptedTodos,
         score: dailyCompletion.score,
         totalPossibleScore: dailyCompletion.totalPossibleScore
       });

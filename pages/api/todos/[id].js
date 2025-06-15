@@ -1,12 +1,14 @@
 // pages/api/todos/[id].js
 import connectToMongo from '@/middleware/connectToMongo';
 import Todo from '@/models/Todo';
+import { encryptFields, decryptFields, ENCRYPTED_FIELDS } from '@/utils/encryption';
+import { getUserId } from '@/middleware/encryption';
 
 const handler = async (req, res) => {
   const { id } = req.query;
-
   if (req.method === 'PUT') {
     try {
+      const userId = getUserId(req);
       const { title, difficulty, priority, category } = req.body;
 
       if (!category) {
@@ -57,8 +59,20 @@ const handler = async (req, res) => {
           }
         }
 
-        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, difficulty, score, priority, category }, { new: true });
-        res.status(200).json(updatedTodo);
+        // Encrypt sensitive fields before updating
+        const encryptedData = encryptFields({ title, category }, ENCRYPTED_FIELDS.TODO, userId);
+        
+        const updatedTodo = await Todo.findByIdAndUpdate(id, { 
+          ...encryptedData,
+          difficulty, 
+          score, 
+          priority 
+        }, { new: true });
+        
+        // Decrypt before sending response
+        const decryptedTodo = decryptFields(updatedTodo.toObject(), ENCRYPTED_FIELDS.TODO, userId);
+        
+        res.status(200).json(decryptedTodo);
       } else {
         res.status(404).json({ message: 'Todo not found' });
       }

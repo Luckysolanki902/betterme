@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Typography, Box, List, Paper, Divider, 
-  Skeleton, Alert, Fab
+  Skeleton, Alert, Fab, Dialog, useTheme, useMediaQuery
 } from '@mui/material';
 import Layout from '../../components/Layout';
 import TodoListItem from '../../components/TodoListItem';
@@ -12,6 +12,8 @@ import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 
 const AdminPanel = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [todos, setTodos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -164,14 +166,20 @@ const AdminPanel = () => {
         }}
       >
         <AddIcon />
-      </Fab>
-
-      {/* Modern Add/Edit Dialog */}
-      <ModifyTodosNew
+      </Fab>      {/* Modern Add/Edit Dialog */}      <Dialog
         open={openDialog}
         onClose={handleDialogClose}
-        editingTodo={editingTodo}
-        todos={todos}      />
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <ModifyTodosNew
+          open={openDialog}
+          onClose={handleDialogClose}
+          editingTodo={editingTodo}
+          todos={todos}
+        />
+      </Dialog>
     </Layout>
   );
 };

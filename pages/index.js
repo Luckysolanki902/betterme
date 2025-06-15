@@ -789,129 +789,15 @@ const Home = () => {
         </Box>        {/* Modify dialog */}        <Dialog 
           open={modifyDialogOpen} 
           onClose={handleCloseModifyDialog}
+          maxWidth="sm"
           fullWidth
-          maxWidth="md"
-          TransitionComponent={Slide}
-          TransitionProps={{ direction: "up", timeout: 500 }}
-          PaperProps={{
-            sx: {
-              borderRadius: 6,
-              boxShadow: '0 20px 80px rgba(0, 0, 0, 0.2)',
-              background: `linear-gradient(145deg, ${alpha(theme.palette.background.paper, 0.95)}, ${theme.palette.background.paper})`,
-              backdropFilter: 'blur(20px)',
-              overflow: 'hidden',
-              border: 'none',
-            }
-          }}
-        >          <DialogTitle sx={{ 
-            pb: 2,
-            pt: 3,
-            background: `linear-gradient(145deg, ${alpha(theme.palette.primary.light, 0.07)} 0%, ${alpha(theme.palette.secondary.light, 0.07)} 100%)`,
-            display: 'flex',
-            borderBottom: 'none',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            px: 3
-          }}>            <Box>
-              <Box
-                component={motion.div}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4 }}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '12px',
-                    background: 'linear-gradient(45deg, #4263EB 30%, #9370DB 90%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 6px 20px rgba(66, 99, 235, 0.2)',
-                  }}
-                >
-                  <EditIcon sx={{ color: 'white', fontSize: '1.4rem' }} />
-                </Box>
-                
-                <Box>
-                  <Typography 
-                    variant="h5" 
-                    component="div" 
-                    fontWeight={800}
-                    sx={{ 
-                      background: 'linear-gradient(45deg, #4263EB 30%, #9370DB 90%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      fontSize: { xs: '1.4rem', sm: '1.7rem' }
-                    }}
-                  >
-                    Manage Your Tasks
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    component={motion.p}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    sx={{ fontWeight: 500, mt: 0.5 }}
-                  >
-                    Create and organize tasks to boost your productivity
-                  </Typography>
-                </Box>
-              </Box>
-            </Box><IconButton
-              onClick={handleCloseModifyDialog}
-              size="medium"
-              edge="end"
-              sx={{
-                color: theme.palette.text.primary,
-                width: 38,
-                height: 38,
-                background: alpha(theme.palette.divider, 0.08),
-                '&:hover': { 
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                  color: theme.palette.primary.main,
-                  transform: 'scale(1.1)'
-                },
-                transition: 'all 0.25s'
-              }}
-              component={motion.button}
-              whileHover={{ rotate: 90, scale: 1.1 }}
-              transition={{ duration: 0.25, type: "spring" }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </DialogTitle>          <DialogContent 
-            sx={{ 
-              px: { xs: 2, sm: 3 }, 
-              pb: 4, 
-              pt: 3, 
-              overflowY: 'auto',
-              '&::-webkit-scrollbar': {
-                width: '8px',
-                borderRadius: '8px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-                borderRadius: '8px',
-              },
-            }}
-          >            <Box 
-              sx={{ 
-                height: '100%',
-                position: 'relative'
-              }}
-            >
-              <ModifyTodosNew open={true} onClose={handleCloseModifyDialog} />
-            </Box>
-          </DialogContent>
+          fullScreen={isMobile}
+        >
+          <ModifyTodosNew 
+            open={modifyDialogOpen} 
+            onClose={handleCloseModifyDialog}
+            todos={todos}
+          />
         </Dialog>
       </Container>
     </Layout>

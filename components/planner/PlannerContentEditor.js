@@ -43,12 +43,33 @@ const PlannerContentEditor = ({
   const [hasChanges, setHasChanges] = useState(false);
   const dragSourceRef = useRef(null);
   const theme = useTheme();
-  
   // Update blocks when content prop changes
   useEffect(() => {
     setBlocks(content);
   }, [content]);
   
+  // Save handler
+  const handleTriggerSave = () => {
+    if (onSave && typeof onSave === 'function') {
+      onSave(blocks);
+      setHasChanges(false);
+    }
+  };
+  
+  // Add keyboard shortcut for saving (Ctrl+S)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault(); // Prevent the browser save dialog
+        if (!readOnly && hasChanges) {
+          handleTriggerSave();
+        }
+      }
+    };
+      document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [readOnly, hasChanges, onSave, blocks]);
+    
   // Update parent component when blocks change
   useEffect(() => {
     if (onChange && !readOnly) {

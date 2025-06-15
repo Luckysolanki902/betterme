@@ -1,16 +1,40 @@
 // pages/api/todos/index.js
 import connectToMongo from '@/middleware/connectToMongo';
 import Todo from '@/models/Todo';
+const { encryptFields, decryptArray, ENCRYPTED_FIELDS } = require('@/utils/encryption');
+const { getUserId } = require('@/middleware/encryption');
 
-const handler = async (req, res) => {
-  if (req.method === 'GET') {
+const handler = async (req, res) => {  if (req.method === 'GET') {
     try {
+      const userId = getUserId(req);
       const todos = await Todo.find({}).sort({ priority: 1 });
-      res.status(200).json(todos);
+      
+      // Defensive check for todos data
+      if (!todos || !Array.isArray(todos)) {
+        console.error('Invalid todos data returned from database:', todos);
+        return res.status(200).json([]); // Return empty array instead of failing
+      }
+      
+      try {
+        // Decrypt todos before sending to client
+        const decryptedTodos = decryptArray(todos, ENCRYPTED_FIELDS.TODO, userId);
+        res.status(200).json(decryptedTodos || []);
+      } catch (decryptError) {
+        console.error('Error decrypting todos:', decryptError);
+        // If decryption fails, send back the original todos without sensitive fields
+        const safeFields = todos.map(todo => {
+          const safeTodo = { ...todo.toObject() };
+          (ENCRYPTED_FIELDS.TODO || []).forEach(field => delete safeTodo[field]);
+          return safeTodo;
+        });
+        res.status(200).json(safeFields);
+      }
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching todos', error });
-    }  } else if (req.method === 'POST') {
+      console.error('Error in todos GET endpoint:', error);
+      res.status(500).json({ message: 'Error fetching todos', error: error.message });
+    }} else if (req.method === 'POST') {
     try {
+      const userId = getUserId(req);
       const { title, difficulty, priority, category } = req.body;
 
       if (!category) {
@@ -57,9 +81,27 @@ const handler = async (req, res) => {
       // Shift existing todos if necessary
       if (priority <= maxPriority) {
         await Todo.updateMany({ priority: { $gte: priority } }, { $inc: { priority: 1 } });
-      }      const newTodo = new Todo({ title, difficulty, score, priority, category });
+      }
+
+      // Encrypt sensitive fields before saving
+      const encryptedData = encryptFields({ title, category }, ENCRYPTED_FIELDS.TODO, userId);
+      
+      const newTodo = new Todo({ 
+        ...encryptedData,
+        difficulty, 
+        score, 
+        priority 
+      });
       await newTodo.save();
-      res.status(201).json(newTodo);
+      
+      // Decrypt before sending response
+      const decryptedTodo = {
+        ...newTodo.toObject(),
+        title,
+        category
+      };
+      
+      res.status(201).json(decryptedTodo);
     } catch (error) {
       res.status(500).json({ message: 'Error creating todo', error });
     }
