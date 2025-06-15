@@ -11,7 +11,7 @@ const handler = async (req, res) => {
       res.status(500).json({ message: 'Error fetching todos', error });
     }  } else if (req.method === 'POST') {
     try {
-      const { title, difficulty, priority, category, isColorful } = req.body;
+      const { title, difficulty, priority, category } = req.body;
 
       if (!category) {
         return res.status(400).json({ message: 'Category is required' });
@@ -57,9 +57,7 @@ const handler = async (req, res) => {
       // Shift existing todos if necessary
       if (priority <= maxPriority) {
         await Todo.updateMany({ priority: { $gte: priority } }, { $inc: { priority: 1 } });
-      }
-
-      const newTodo = new Todo({ title, difficulty, score, priority, category, isColorful });
+      }      const newTodo = new Todo({ title, difficulty, score, priority, category });
       await newTodo.save();
       res.status(201).json(newTodo);
     } catch (error) {

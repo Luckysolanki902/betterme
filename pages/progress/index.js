@@ -6,7 +6,8 @@ import {
   Container, 
   useTheme, 
   alpha,
-  Skeleton
+  Skeleton,
+  useMediaQuery
 } from '@mui/material';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
@@ -18,11 +19,13 @@ import ProgressCard from '@/components/ProgressCard';
 import ProgressInsight from '@/components/ProgressInsight';
 import CategoriesChart from '@/components/CategoriesChart';
 import ProgressTrend from '@/components/ProgressTrend';
+import { useStreak } from '@/contexts/StreakContext';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 
 const Progress = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [tabValue, setTabValue] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState([]);
@@ -30,6 +33,7 @@ const Progress = () => {
   const [trendData, setTrendData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasData, setHasData] = useState(true);
+  const { currentStreak, longestStreak, dayCount } = useStreak();
 
   // Map tab value to period
   const tabToPeriod = ['day', 'week', 'month'];
@@ -128,12 +132,10 @@ const Progress = () => {
     }
 
     const periodText = currentPeriod === 'day' ? 'Today' : 
-                      currentPeriod === 'week' ? 'This Week' : 'This Month';
-
-    return (
-      <Grid container spacing={3}>
+                      currentPeriod === 'week' ? 'This Week' : 'This Month';    return (
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         {/* Overall Completion Card */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sm={6} md={4}>
           <ProgressCard 
             title={`${periodText}'s Completion`}
             value={progressData?.insights?.completedTasks || 0}
@@ -147,29 +149,58 @@ const Progress = () => {
           />
         </Grid>
 
-        {/* Progress Insights */}
-        <Grid item xs={12} md={6}>
-          <ProgressInsight
-            insights={progressData?.insights || {}}
-            period={currentPeriod}
+        {/* Current Streak Card */}
+        <Grid item xs={12} sm={6} md={4}>
+          <ProgressCard 
+            title="Current Streak"
+            value={currentStreak}
+            maxValue={longestStreak || currentStreak || 1}
+            suffix="days"
+            icon={
+              <WhatshotIcon sx={{ 
+                color: theme.palette.warning.main 
+              }} />
+            }
             animationDelay={0.2}
           />
         </Grid>
 
-        {/* Categories Breakdown */}
-        <Grid item xs={12} md={6}>
-          <CategoriesChart 
-            data={progressData?.categoryData || []} 
+        {/* Day Count Card */}
+        <Grid item xs={12} sm={6} md={4}>
+          <ProgressCard 
+            title="Journey Progress"
+            value={dayCount}
+            suffix="days"
+            icon={
+              <DirectionsRunIcon sx={{ 
+                color: theme.palette.success.main 
+              }} />
+            }
             animationDelay={0.3}
+          />
+        </Grid>        {/* Progress Insights */}
+        <Grid item xs={12} lg={6}>
+          <ProgressInsight
+            insights={progressData?.insights || {}}
+            period={currentPeriod}
+            animationDelay={0.4}
           />
         </Grid>
 
-        {/* Progress Trend */}
-        <Grid item xs={12} md={6}>
+        {/* Categories Breakdown */}
+        <Grid item xs={12} lg={6}>
+          <CategoriesChart 
+            data={progressData?.categoryData || []} 
+            animationDelay={0.5}
+          />
+        </Grid>
+
+        {/* Progress Trend - Full Width on Mobile */}
+        <Grid item xs={12}>
           <ProgressTrend 
             data={trendData} 
             period={currentPeriod} 
-            animationDelay={0.4}
+            animationDelay={0.6}
           />
         </Grid>
       </Grid>

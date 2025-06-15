@@ -48,7 +48,7 @@ const PlannerPage = () => {
   return (
     <Layout>
       <Head>
-        <title>{pageTitle} | Better Me Planner</title>
+        <title>{pageTitle} | Another Me - Planner</title>
       </Head>
       
       <PlannerLayout currentPageId={id} title={pageTitle}>

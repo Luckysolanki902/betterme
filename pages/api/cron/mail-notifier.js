@@ -187,7 +187,7 @@ const createEmailHTML = async (isMorning) => {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Better Me</h1>
+          <h1>Another Me</h1>
           <p>${formattedDate}</p>
         </div>
         <div class="content">
@@ -215,11 +215,11 @@ const createEmailHTML = async (isMorning) => {
           </div>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://better-me.vercel.app" class="button">Open Better Me</a>
+            <a href="https://another-me.vercel.app" class="button">Open Another Me</a>
           </div>
         </div>
         <div class="footer">
-          &copy; ${new Date().getFullYear()} Better Me • Daily Reminder • Stay focused and determined.
+          &copy; ${new Date().getFullYear()} Another Me • Daily Reminder • Stay focused and determined.
         </div>
       </div>
     </body>
@@ -250,11 +250,11 @@ const handler = async (req, res) => {
     const transporter = createTransporter();
     
     const info = await transporter.sendMail({
-      from: `"Better Me" <${process.env.EMAIL_USER}>`,
+      from: `"Another Me" <${process.env.EMAIL_USER}>`,
       to: "luckysolanki902@gmail.com, luckysolanki9027@gmail.com",
       subject: isMorning ? 
-        "🌞 Good Morning! Your Better Me Daily Tasks" : 
-        "🌙 Evening Check-in | Better Me Tasks Review",
+        "🌞 Good Morning! Your Another Me Daily Tasks" : 
+        "🌙 Evening Check-in | Another Me Tasks Review",
       html: htmlContent,
     });
     

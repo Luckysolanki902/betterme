@@ -36,13 +36,16 @@ import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CloseIcon from '@mui/icons-material/Close';
 import Quote from '../components/Quote';
 import Todos from '../components/Todos';
+import TodosLoading from '../components/TodosLoading';
 import Layout from '@/components/Layout';
 import { useStartDate } from '@/contexts/StartDateContext';
+import { useStreak } from '@/contexts/StreakContext';
 import EmptyState from '@/components/EmptyState';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import ModifyTodos from '@/components/ModifyTodos';
+import ModifyTodosNew from '@/components/ModifyTodosNew';
 import TypeAdminPassword from '@/components/TypeAdminPassword';
+import { getAdjustedDateString } from '@/utils/streakUtils';
 
 const quotes = [
   "Who I was yesterday is not who I am today, and who I am today will not be who I am tomorrow",
@@ -62,16 +65,21 @@ const Home = () => {
     improvement: 0,
     todayScore: 0,
     todayPossibleScore: 0
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  });  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingTodos, setIsLoadingTodos] = useState(true);
+  const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);
   const [quote, setQuote] = useState('');
   const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
   const startDate = useStartDate();
+  const { dayCount, updateStreak } = useStreak();
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Combined loading state for UI
+  const showTodosLoading = isLoadingTodos || isLoadingCompletions;
   
   // Check authentication status on load
   useEffect(() => {
@@ -113,9 +121,8 @@ const Home = () => {
       setRandomQuote();
     }
   }, [isAuthenticated]);
-
   const fetchTodos = async () => {
-    setIsLoading(true);
+    setIsLoadingTodos(true);
     try {
       const res = await fetch('/api/todos');
       const data = await res.json();
@@ -124,7 +131,7 @@ const Home = () => {
     } catch (error) {
       console.error('Error fetching todos:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingTodos(false);
     }
   };
 
@@ -136,10 +143,10 @@ const Home = () => {
     } catch (error) {
       console.error('Error fetching total score data:', error);
     }
-  };
-  const fetchCompletions = async () => {
+  };  const fetchCompletions = async () => {
+    setIsLoadingCompletions(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getAdjustedDateString();
       const res = await fetch(`/api/daily-completion?date=${today}`);
       const data = await res.json();
       setCompletedTodos(data.completedTodos.map(todo => todo._id));
@@ -150,6 +157,8 @@ const Home = () => {
       setTodos(todosData);
     } catch (error) {
       console.error('Error fetching completions:', error);
+    } finally {
+      setIsLoadingCompletions(false);
     }
   };
   const handleTodoToggle = async (todoId) => {
@@ -184,9 +193,9 @@ const Home = () => {
         setCompletedTodos(originalCompletedState);
         throw new Error('Failed to update todo completion status');
       }
-        const data = await res.json();
-      if (data.success) {
+        const data = await res.json();      if (data.success) {
         fetchTotalScore();
+        updateStreak(); // Update streak data
         // Refresh todos to get updated completion status
         const todosRes = await fetch('/api/todos');
         const todosData = await todosRes.json();
@@ -212,7 +221,6 @@ const Home = () => {
   };
 
   // Calculate days streak
-  const dayCount = startDate ? differenceInDays(new Date(), new Date(startDate)) + 1 : 0;
 
   const handleOpenModifyDialog = () => {
     setModifyDialogOpen(true);
@@ -510,9 +518,10 @@ const Home = () => {
             mb: 4,
             borderRadius: '16px',
             overflow: 'visible',
-          }}
-        >
-          {todos.length > 0 ? (
+          }}        >
+          {showTodosLoading ? (
+            <TodosLoading />
+          ) : todos.length > 0 ? (
             <Todos 
               todos={todos} 
               completedTodos={completedTodos}
@@ -900,7 +909,7 @@ const Home = () => {
                 position: 'relative'
               }}
             >
-              <ModifyTodos isDialog={true} onClose={handleCloseModifyDialog} />
+              <ModifyTodosNew open={true} onClose={handleCloseModifyDialog} />
             </Box>
           </DialogContent>
         </Dialog>

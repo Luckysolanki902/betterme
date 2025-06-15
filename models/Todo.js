@@ -17,9 +17,8 @@ const TodoSchema = new mongoose.Schema(
       max: [10, 'Score must be at most 10']
     },
     completed: { type: Boolean, default: false },
-    priority: { type: Number, default: 0 }, // Default priority
-    isColorful: { type: Boolean, default: false }, // New field
-    category: { type: String, required: true, index: true }, // New field
+    priority: { type: Number, default: 0 },
+    category: { type: String, required: true, index: true },
   },
   { timestamps: true } // Enable automatic createdAt and updatedAt fields
 );

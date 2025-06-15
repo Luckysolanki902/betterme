@@ -6,6 +6,7 @@ import {
   Typography, 
   useTheme, 
   alpha,
+  useMediaQuery,
 } from '@mui/material';
 import { 
   AreaChart, 
@@ -22,6 +23,8 @@ import { format, parseISO } from 'date-fns';
 
 const ProgressTrend = ({ data, period = 'week', animationDelay = 0 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   
   // Format X-axis labels based on period
   const formatXAxis = (tickItem) => {
@@ -64,16 +67,15 @@ const ProgressTrend = ({ data, period = 'week', animationDelay = 0 }) => {
     return null;
   };
   
-  return (
-    <Paper
+  return (    <Paper
       component={motion.div}
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, delay: animationDelay }}
       elevation={0}
       sx={{
-        p: 3,
-        height: '100%',
+        p: { xs: 2, sm: 3 },
+        height: { xs: '300px', sm: '350px', md: '400px' },
         borderRadius: 3,
         boxShadow: `0 4px 20px ${alpha(theme.palette.divider, 0.1)}`,
         border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
@@ -81,6 +83,8 @@ const ProgressTrend = ({ data, period = 'week', animationDelay = 0 }) => {
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
+        background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${theme.palette.background.paper} 100%)`,
+        backdropFilter: 'blur(10px)',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -91,27 +95,33 @@ const ProgressTrend = ({ data, period = 'week', animationDelay = 0 }) => {
           background: 'linear-gradient(to right, #4263EB, #9370DB)',
         }
       }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+    >      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2, sm: 3 } }}>
         <Box 
           sx={{ 
-            mr: 1.5, 
+            mr: { xs: 1, sm: 1.5 }, 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 36,
-            height: 36,
+            width: { xs: 32, sm: 36 },
+            height: { xs: 32, sm: 36 },
             borderRadius: '50%',
-            backgroundColor: alpha(theme.palette.primary.main, 0.1)
+            background: 'linear-gradient(135deg, #4263EB 0%, #9370DB 100%)',
+            boxShadow: '0 4px 12px rgba(66, 99, 235, 0.3)'
           }}
         >
-          <TrendingUpIcon sx={{ color: theme.palette.primary.main }} />
+          <TrendingUpIcon sx={{ 
+            color: 'white', 
+            fontSize: { xs: 16, sm: 20 } 
+          }} />
         </Box>
         <Typography
           variant="h6"
           sx={{
-            fontWeight: 600,
-            color: theme.palette.text.primary,
+            fontWeight: 700,
+            fontSize: { xs: '1rem', sm: '1.1rem' },
+            background: 'linear-gradient(to right, #4263EB, #9370DB)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
           }}
         >
           {period === 'month' ? 'Monthly' : period === 'week' ? 'Weekly' : 'Daily'} Progress Trend

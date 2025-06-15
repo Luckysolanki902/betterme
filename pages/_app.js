@@ -2,6 +2,7 @@
 import "@/styles/globals.css";
 import { createTheme, ThemeProvider, CssBaseline, responsiveFontSizes } from '@mui/material';
 import { StartDateProvider } from "@/contexts/StartDateContext";
+import { StreakProvider } from "@/contexts/StreakContext";
 import PageTransition from "@/components/PageTransition";
 import { Inter } from 'next/font/google';
 import Head from 'next/head';
@@ -164,19 +165,20 @@ function AppWithAuth({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>Better Me | Todo Tracker</title>
+        <title>Another Me | Todo Tracker</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="description" content="Better Me - A minimalist todo tracking application" />
+        <meta name="description" content="Another Me - A minimalist todo tracking application" />
         <link rel="icon" href="/favicon2.png" />
       </Head>
       
       <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <main className={inter.className}>
+        <CssBaseline />        <main className={inter.className}>
           <StartDateProvider>
-            <PageTransition>
-              <ComponentToRender {...pageProps} />
-            </PageTransition>
+            <StreakProvider>
+              <PageTransition>
+                <ComponentToRender {...pageProps} />
+              </PageTransition>
+            </StreakProvider>
           </StartDateProvider>
         </main>
       </ThemeProvider>

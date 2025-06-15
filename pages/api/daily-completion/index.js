@@ -4,13 +4,14 @@ import DailyCompletion from '@/models/DailyCompletion';
 import Todo from '@/models/Todo';
 import Config from '@/models/Config';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { getAdjustedDateString } from '@/utils/streakUtils';
 import mongoose from 'mongoose';
 
 const handler = async (req, res) => {
-  if (req.method === 'GET') {
-    try {
+  if (req.method === 'GET') {    try {
       const { date } = req.query;
-      const selectedDate = date || format(new Date(), 'yyyy-MM-dd');
+      // Use adjusted date logic if no date provided
+      const selectedDate = date || getAdjustedDateString();
       
       const dailyCompletion = await DailyCompletion.findOne({ 
         date: { 

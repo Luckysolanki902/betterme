@@ -168,7 +168,7 @@ export default function Layout({ children }) {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            Better Me
+            Another Me
           </Typography>
         </Box>
         <IconButton onClick={handleDrawerToggle} sx={{ color: 'text.secondary' }}>
@@ -213,7 +213,7 @@ export default function Layout({ children }) {
       
       <Box sx={{ p: 3, opacity: 0.6 }}>
         <Typography variant="caption" sx={{ display: 'block', textAlign: 'center' }}>
-          Better Me • {new Date().getFullYear()}
+          Another Me • {new Date().getFullYear()}
         </Typography>
       </Box>
     </Box>
@@ -264,7 +264,7 @@ export default function Layout({ children }) {
                   B
                 </Avatar>
               )}
-              Better Me
+              Another Me
             </Logo>
           </Box>
 

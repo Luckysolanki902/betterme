@@ -7,7 +7,7 @@ const handler = async (req, res) => {
 
   if (req.method === 'PUT') {
     try {
-      const { title, difficulty, priority, category, isColorful } = req.body;
+      const { title, difficulty, priority, category } = req.body;
 
       if (!category) {
         return res.status(400).json({ message: 'Category is required' });
@@ -57,7 +57,7 @@ const handler = async (req, res) => {
           }
         }
 
-        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, difficulty, score, priority, category, isColorful }, { new: true });
+        const updatedTodo = await Todo.findByIdAndUpdate(id, { title, difficulty, score, priority, category }, { new: true });
         res.status(200).json(updatedTodo);
       } else {
         res.status(404).json({ message: 'Todo not found' });
