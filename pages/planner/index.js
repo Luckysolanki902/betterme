@@ -302,7 +302,6 @@ const PlannerIndex = () => {
       <TypeAdminPassword onSuccess={() => setIsAuthenticated(true)} />
     );
   }
-
   return (
     <Layout>
       <Box 
@@ -311,14 +310,15 @@ const PlannerIndex = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
         sx={{ 
-          mb: 4,
+          mb: { xs: 2, sm: 3 },
+          mx: { xs: 0.5, sm: 1, md: 2 },
           display: 'flex', 
           flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
           alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 2, sm: 0 },
+          gap: { xs: 1.5, sm: 0 },
           position: 'relative',
-          pb: 2,
+          pb: { xs: 1, sm: 2 },
           '&::after': {
             content: '""',
             position: 'absolute',
@@ -333,8 +333,8 @@ const PlannerIndex = () => {
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <DescriptionOutlinedIcon sx={{ 
-            fontSize: 28, 
-            mr: 1.5, 
+            fontSize: { xs: 22, sm: 28 }, 
+            mr: { xs: 1, sm: 1.5 }, 
             background: 'linear-gradient(to right, #4263EB, #9370DB)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -344,9 +344,11 @@ const PlannerIndex = () => {
             component="h1" 
             sx={{ 
               fontWeight: 700, 
+              fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2rem' },
               background: 'linear-gradient(to right, #4263EB, #9370DB)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              lineHeight: { xs: 1.2, sm: 1.3 },
             }}
           >
             Planner

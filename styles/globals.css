@@ -85,6 +85,45 @@ button:focus {
   background: rgba(66, 99, 235, 0.2);
 }
 
+/* Responsive improvements */
+@media (max-width: 600px) {
+  html, body {
+    font-size: 14px;
+  }
+  
+  /* Reduce horizontal padding on mobile */
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Make dialogs full width on mobile */
+  .MuiDialog-paper {
+    margin: 8px !important;
+    width: calc(100% - 16px) !important;
+    max-width: calc(100% - 16px) !important;
+  }
+  
+  /* Compact buttons on mobile */
+  .MuiButton-root {
+    min-height: 36px !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* Compact form fields */
+  .MuiTextField-root .MuiInputBase-root {
+    font-size: 0.875rem !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Tablet adjustments */
+  .MuiContainer-root {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
 /* Material UI component overrides */
 .MuiPaper-root {
   transition: box-shadow 0.3s ease, transform 0.3s ease !important;

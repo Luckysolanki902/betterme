@@ -46,7 +46,7 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
   const scorePercentage = totalScore > 0 ? Math.round((completedScore / totalScore) * 100) : 0;
   
   // Filter todos based on search and category
-  const filteredTodos = todos.filter(todo => {
+  const filteredTodos = todos?.filter(todo => {
     const matchesSearch = 
       todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (todo.category && todo.category.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -72,20 +72,18 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
     <Paper
       elevation={0}
       sx={{
-        borderRadius: 4,
+        borderRadius: 1,
         overflow: 'hidden',
-        border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
         boxShadow: '0 10px 40px rgba(0,0,0,0.06)',
         position: 'relative',
         background: `linear-gradient(to bottom, ${alpha(theme.palette.background.paper, 0.9)}, ${theme.palette.background.paper})`,
         backdropFilter: 'blur(10px)',
       }}
-    >
-      {/* Header with search and score */}
+    >      {/* Header with search and score */}
       <Box 
         sx={{ 
-          p: 2.5, 
-          background: `linear-gradient(120deg, ${alpha(theme.palette.primary.light, 0.08)} 0%, ${alpha(theme.palette.secondary.light, 0.08)} 100%)`,
+          p: { xs: 1.5, sm: 2.5 }, 
+          background: `white`,
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
           position: 'sticky',
           top: 0,
@@ -93,7 +91,8 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 2,        }}>
+          gap: { xs: 1.5, sm: 2 },
+        }}>
           <Box sx={{ flex: 1 }}>
             <TextField
               fullWidth
@@ -104,7 +103,6 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
               onChange={handleSearch}
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: '12px',
                   background: alpha(theme.palette.background.default, 0.6),
                   backdropFilter: 'blur(8px)',
                   transition: 'all 0.3s ease',
@@ -242,7 +240,7 @@ const Todos = ({ todos, completedTodos, onTodoToggle }) => {
                       : `linear-gradient(to right, ${alpha(theme.palette.background.paper, 0.4)}, ${theme.palette.background.paper})`,
                     p: 1.5,
                     pl: 2.5,
-                    borderRadius: 2.5,
+                    borderRadius: 1.5,
                     border: isCompleted 
                       ? `1px solid ${alpha(theme.palette.success.main, 0.25)}` 
                       : `1px solid ${alpha(theme.palette.divider, 0.09)}`,

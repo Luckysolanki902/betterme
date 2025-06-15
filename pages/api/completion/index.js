@@ -52,7 +52,7 @@ const handler = async (req, res) => {
       
       if (isCompleted) {
         // Remove todo from completedTodos
-        dailyCompletion.completedTodos = dailyCompletion.completedTodos.filter(
+        dailyCompletion.completedTodos = dailyCompletion.completedTodos?.filter(
           id => id.toString() !== todoId
         );
         dailyCompletion.score -= todoScore;

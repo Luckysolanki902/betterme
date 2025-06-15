@@ -102,7 +102,7 @@ const handler = async (req, res) => {
         // Filter completedTodos if category is specified
         const relevantCompletedTodos = category === 'all' 
           ? completion.completedTodos 
-          : completion.completedTodos.filter(todo => todo.category === category);
+          : completion.completedTodos?.filter(todo => todo.category === category);
         
         // Update completed tasks count
         matchingInterval.completedTasks = relevantCompletedTodos.length;

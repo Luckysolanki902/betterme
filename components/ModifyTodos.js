@@ -461,19 +461,18 @@ const ModifyTodos = ({ isDialog = false, onClose = null }) => {
                     }
                   }}
                   onClick={() => setForm({ ...form, isColorful: !form.isColorful })}
-                >
-                  <FormControlLabel
+                >                  <FormControlLabel
                     control={
                       <Checkbox
                         checked={form.isColorful}
                         onChange={(e) => setForm({ ...form, isColorful: e.target.checked })}
                         name="isColorful"
-                        size='medium'
+                        size='small'
                         sx={{
                           '&.Mui-checked': {
                             color: theme.palette.primary.main,
                           },
-                          
+                          transform: 'scale(0.9)',
                         }}
                       />
                     }
@@ -482,7 +481,7 @@ const ModifyTodos = ({ isDialog = false, onClose = null }) => {
                         variant="body1" 
                         sx={{ 
                           fontWeight: 600,
-                          fontSize: '0.95rem',
+                          fontSize: '0.9rem',
                           display: 'flex',
                           alignItems: 'center',
                           gap: 1

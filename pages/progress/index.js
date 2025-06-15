@@ -175,24 +175,29 @@ const Progress = () => {
       </Grid>
     );
   };
-  
-  return (
+    return (
     <Layout>
-      <Container maxWidth="lg">
-        <Box 
+      <Container 
+        maxWidth={false}
+        sx={{ 
+          px: { xs: 0.5, sm: 1, md: 2 },
+          maxWidth: { xs: '100%', sm: '100%', md: '1200px' },
+          mx: 'auto'
+        }}
+      >        <Box 
           component={motion.div}
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           sx={{ 
-            mb: 4,
+            mb: { xs: 2, sm: 3 },
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', sm: 'center' },
-            gap: { xs: 2, sm: 0 },
+            gap: { xs: 1.5, sm: 0 },
             position: 'relative',
-            pb: 2,
+            pb: { xs: 1, sm: 2 },
             '&::after': {
               content: '""',
               position: 'absolute',
@@ -204,11 +209,10 @@ const Progress = () => {
               background: 'linear-gradient(to right, #4263EB, #9370DB)',
             }
           }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        >          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <WhatshotIcon sx={{ 
-              fontSize: 32, 
-              mr: 1.5, 
+              fontSize: { xs: 24, sm: 32 }, 
+              mr: { xs: 1, sm: 1.5 }, 
               background: 'linear-gradient(to right, #4263EB, #9370DB)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -218,12 +222,14 @@ const Progress = () => {
               component="h1" 
               sx={{ 
                 fontWeight: 700, 
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2rem' },
                 background: 'linear-gradient(to right, #4263EB, #9370DB)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
+                lineHeight: { xs: 1.2, sm: 1.3 },
               }}
             >
-              Your Progress Journey
+              Progress
             </Typography>
           </Box>
           <Box 

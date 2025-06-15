@@ -165,7 +165,7 @@ const Home = () => {
     try {
       // Optimistic update
       const updatedCompletedTodos = isComplete 
-        ? completedTodos.filter(id => id !== todoId)
+        ? completedTodos?.filter(id => id !== todoId)
         : [...completedTodos, todoId];
       
       setCompletedTodos(updatedCompletedTodos);
@@ -377,41 +377,45 @@ const Home = () => {
       </Layout>
     );
   }
-
   return (
-    <Layout>      <Container 
-        maxWidth="md" 
+    <Layout>
+      <Container 
+        maxWidth={false}
         component={motion.div}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        sx={{ py: { xs: 1, sm: 2 } }}
+        sx={{ 
+          py: { xs: 0.5, sm: 1 },
+          px: { xs: 0.5, sm: 1, md: 2 },
+          maxWidth: { xs: '100%', sm: '100%', md: '900px' },
+          mx: 'auto'
+        }}
       >
-        {/* Header with gradient accent and score */}        {/* Compact header with action buttons */}
-        <Box 
+        {/* Header with gradient accent and score */}        {/* Compact header with action buttons */}        <Box 
           component={motion.div}
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           sx={{ 
-            mb: 3,
+            mb: { xs: 1.5, sm: 2.5 },
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', sm: 'center' },
-            gap: { xs: 1.5, sm: 2 },
+            gap: { xs: 1, sm: 2 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography 
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>            <Typography 
               variant="h4" 
               component="h1" 
               sx={{ 
                 fontWeight: 800, 
-                fontSize: { xs: '1.8rem', sm: '2.2rem' },
+                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' },
                 background: 'linear-gradient(to right, #4263EB, #9370DB)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
+                lineHeight: { xs: 1.2, sm: 1.3 },
               }}
             >
               Today's Tasks
@@ -629,7 +633,7 @@ const Home = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {console.log({todos})}
-                  {todos.filter(todo => todo?.completed).length} of {todos.length} tasks done
+                  {todos?.filter(todo => todo?.completed).length} of {todos.length} tasks done
                 </Typography>
               </CardContent>
             </Card>

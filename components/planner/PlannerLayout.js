@@ -127,56 +127,19 @@ const PlannerLayout = ({ children, currentPageId, title }) => {
           </Box>
         </Box>
       </Drawer>
-      
-      {/* Main content */}
+        {/* Main content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, md: 3 },
+          p: { xs: 1, sm: 1.5, md: 2 },
+          px: { xs: 0.5, sm: 1, md: 2 },
           width: { xs: '100%', md: 'calc(100% - 260px)' },
           ml: { xs: 0, md: 0 },
         }}
       >
         {/* Mobile header with menu button */}
-        {isMobile && (
-          <Paper 
-            elevation={0}
-            component={motion.div}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              mb: 2,
-              p: 1.5,
-              borderRadius: '12px',
-              border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-              background: alpha(theme.palette.background.paper, 0.7),
-              backdropFilter: 'blur(10px)',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton 
-                onClick={handleDrawerToggle} 
-                sx={{ 
-                  mr: 1,
-                  background: alpha(theme.palette.primary.main, 0.08),
-                  '&:hover': {
-                    background: alpha(theme.palette.primary.main, 0.15),
-                  }
-                }}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" noWrap sx={{ flex: 1, fontWeight: 600 }}>
-                {title || 'Planner'}
-              </Typography>
-            </Box>
-          </Paper>
-        )}
+  
         
         <AnimatePresence mode="wait">
           <motion.div

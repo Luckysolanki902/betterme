@@ -94,14 +94,29 @@ const Settings = () => {
 
     handleCloseResetProgress();
   };
-
   return (
     <Layout>
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Box 
+        sx={{ 
+          my: { xs: 1, sm: 2 },
+          px: { xs: 0.5, sm: 1, md: 2 },
+          maxWidth: { xs: '100%', sm: '100%', md: '800px' },
+          mx: 'auto'
+        }}
+      >
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2rem' },
+            fontWeight: 700,
+            mb: { xs: 1, sm: 2 }
+          }}
+        >
           Settings
         </Typography>
-        <Divider sx={{ mb: 4 }} />
+        <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
         {alertMessage && (
           <Alert 
@@ -111,14 +126,18 @@ const Settings = () => {
           >
             {alertMessage}
           </Alert>
-        )}
-
-        <Stack spacing={3}>
+        )}        <Stack spacing={3}>
           <Paper elevation={1}>
             <Card>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box>
+                <Box 
+                  display="flex" 
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between" 
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  gap={{ xs: 2, sm: 0 }}
+                >
+                  <Box sx={{ flex: 1 }}>
                     <Typography variant="h6" gutterBottom>
                       Reset Start Date
                     </Typography>
@@ -131,6 +150,10 @@ const Settings = () => {
                     color="warning" 
                     onClick={handleOpenResetDate}
                     startIcon={<DateRangeIcon />}
+                    sx={{ 
+                      flexShrink: 0,
+                      minWidth: { xs: '100%', sm: 'auto' }
+                    }}
                   >
                     Reset Date
                   </Button>
@@ -142,8 +165,14 @@ const Settings = () => {
           <Paper elevation={1}>
             <Card>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box>
+                <Box 
+                  display="flex" 
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between" 
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  gap={{ xs: 2, sm: 0 }}
+                >
+                  <Box sx={{ flex: 1 }}>
                     <Typography variant="h6" gutterBottom>
                       Reset Todo Progress
                     </Typography>
@@ -156,6 +185,10 @@ const Settings = () => {
                     color="warning" 
                     onClick={handleOpenResetProgress}
                     startIcon={<CleaningServicesIcon />}
+                    sx={{ 
+                      flexShrink: 0,
+                      minWidth: { xs: '100%', sm: 'auto' }
+                    }}
                   >
                     Reset Progress
                   </Button>

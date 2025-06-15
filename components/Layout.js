@@ -229,7 +229,7 @@ export default function Layout({ children }) {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between', py: { xs: 1, md: 0.5 } }}>
+        <Toolbar sx={{ justifyContent: 'space-between', py: { xs: 0.5, md: 0.5 }, minHeight: { xs: '56px', md: '64px' } }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {isMobile && (
               <IconButton
@@ -321,19 +321,18 @@ export default function Layout({ children }) {
         >
           {drawer}
         </Drawer>
-      </Box>
-
-      <Box
+      </Box>      <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3, md: 4 },
+          p: { xs: 0.5, sm: 1.5, md: 3 },
+          px: { xs: 0.5, sm: 1, md: 2 },
           width: '100%',
           minHeight: '100vh',
-          pt: { xs: '80px', sm: '90px', md: '100px' } // Account for fixed AppBar with increased spacing
+          pt: { xs: '70px', sm: '80px', md: '90px' } // Account for fixed AppBar with reduced spacing
         }}
       >
-        <Container maxWidth="xl">
+        <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 2, md: 3 } }}>
           {children}
         </Container>
       </Box>

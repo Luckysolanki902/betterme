@@ -43,39 +43,45 @@ const AuthGuard = (WrappedComponent) => {
       };
       
       checkAuthentication();
-    }, []);
-
-    // Loading state
+    }, []);    // Loading state
     if (authChecking) {
       return (
         <Box
           sx={{
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             minHeight: '100vh',
+            px: { xs: 2, sm: 3 },
             background: 'linear-gradient(135deg, rgba(66, 99, 235, 0.05) 0%, rgba(147, 112, 219, 0.05) 100%)',
           }}
         >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center'
+            }}
           >
             <CircularProgress
-              size={60}
+              size={50}
               thickness={4}
               sx={{
-                color: theme.palette.primary.main
+                color: theme.palette.primary.main,
+                mb: 2
               }}
             />
             <Typography
               variant="subtitle1"
               sx={{
-                mt: 3,
-                textAlign: 'center',
                 fontWeight: 500,
-                color: theme.palette.text.secondary
+                color: theme.palette.text.secondary,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
               Verifying access...
@@ -83,13 +89,11 @@ const AuthGuard = (WrappedComponent) => {
           </motion.div>
         </Box>
       );
-    }
-
-    // Not authenticated state
+    }    // Not authenticated state
     if (!isAuthenticated) {
       return (
         <Container 
-          maxWidth="md" 
+          maxWidth={false}
           component={motion.div}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -99,45 +103,63 @@ const AuthGuard = (WrappedComponent) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            py: 4
+            px: { xs: 1, sm: 2 },
+            py: 2,
+            maxWidth: { xs: '100%', sm: '500px' },
+            mx: 'auto'
           }}
         >
           <Paper
             elevation={0}
             sx={{
-              p: 5,
+              p: { xs: 3, sm: 4 },
               borderRadius: 4,
               background: alpha(theme.palette.background.paper, 0.8),
               backdropFilter: 'blur(20px)',
               border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
               width: '100%',
-              maxWidth: 500,
+              maxWidth: 450,
               boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)',
               textAlign: 'center'
             }}
-          >
-            <Box 
+          >            <Box 
               sx={{
-                width: 80,
-                height: 80,
+                width: { xs: 60, sm: 80 },
+                height: { xs: 60, sm: 80 },
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #4263EB 0%, #9370DB 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 3,
+                mb: { xs: 2, sm: 3 },
                 mx: 'auto',
                 boxShadow: '0 8px 20px rgba(66, 99, 235, 0.3)'
               }}
             >
-              <LockIcon sx={{ fontSize: 40, color: 'white' }} />
+              <LockIcon sx={{ fontSize: { xs: 28, sm: 40 }, color: 'white' }} />
             </Box>
             
-            <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              fontWeight={700} 
+              gutterBottom
+              sx={{
+                fontSize: { xs: '1.5rem', sm: '2rem' }
+              }}
+            >
               Protected Area
             </Typography>
             
-            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 4 }}>
+            <Typography 
+              variant="body1" 
+              color="text.secondary" 
+              paragraph 
+              sx={{ 
+                mb: { xs: 3, sm: 4 },
+                fontSize: { xs: '0.9rem', sm: '1rem' }
+              }}
+            >
               Please verify your identity to access this content
             </Typography>
             

@@ -150,7 +150,7 @@ const handler = async (req, res) => {
       const todoExists = dailyCompletion.completedTodos.some(id => id.toString() === todoIdStr);
       
       if (todoExists) {        // Remove todo from completedTodos using proper ObjectId comparison
-        dailyCompletion.completedTodos = dailyCompletion.completedTodos.filter(
+        dailyCompletion.completedTodos = dailyCompletion.completedTodos?.filter(
           id => id.toString() !== todoIdStr
         );
         dailyCompletion.score = Math.max(0, dailyCompletion.score - todo.score);
