@@ -26,6 +26,7 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import TimelineRoundedIcon from '@mui/icons-material/TimelineRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import BookRoundedIcon from '@mui/icons-material/BookRounded';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
@@ -96,9 +97,9 @@ const NavItemDrawer = styled(ListItemButton, {
 }));
 
 // Navigation items
-const navItems = [
-  { text: 'Home', icon: <HomeRoundedIcon />, path: '/' },
+const navItems = [  { text: 'Home', icon: <HomeRoundedIcon />, path: '/' },
   { text: 'Planner', icon: <EditRoundedIcon />, path: '/planner' },
+  { text: 'Journal', icon: <BookRoundedIcon />, path: '/journal' },
   { text: 'Progress', icon: <TimelineRoundedIcon />, path: '/progress' },
   { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/settings' }
 ];

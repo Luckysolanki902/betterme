@@ -1,0 +1,47 @@
+.moodDisplay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moodEmoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.moodEmoji:hover {
+  transform: scale(1.1);
+}
+
+.moodDistribution {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  justify-items: center;
+}
+
+.moodItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.moodCount {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-top: 4px;
+}
+
+.moodPercentage {
+  color: #666;
+  font-size: 0.85rem;
+}
