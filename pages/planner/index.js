@@ -359,15 +359,68 @@ const PlannerIndex = () => {
         </Typography>
       </Box>
       
-      <PlannerLayout>
-        {loading ? (
+      <PlannerLayout>        {loading ? (
           <Box 
             component={motion.div}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            sx={{ display: 'flex', justifyContent: 'center', p: 5 }}
+            sx={{ p: 5 }}
           >
-            <CircularProgress size={30} sx={{ color: theme.palette.primary.main }} />
+            <Paper
+              elevation={0}
+              sx={{ 
+                p: 4, 
+                borderRadius: 2,
+                border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`,
+                backgroundColor: alpha(theme.palette.background.paper, 0.6),
+                backdropFilter: 'blur(8px)',
+                textAlign: 'center',
+                maxWidth: 600,
+                mx: 'auto'
+              }}
+            >
+              <Box 
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2
+                }}
+              >
+                <CircularProgress size={40} sx={{ color: theme.palette.primary.main, opacity: 0.8 }} />
+                
+                <Typography variant="h6" color="primary">
+                  Loading Your Planner Pages
+                </Typography>
+                
+                <Typography variant="body1" color="textSecondary">
+                  Preparing your workspace for productive planning
+                </Typography>
+                
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    mt: 1,
+                    justifyContent: 'center', 
+                    width: '100%' 
+                  }}
+                >
+                  {[1, 2, 3].map((i) => (
+                    <Box 
+                      key={i}
+                      sx={{
+                        height: 4,
+                        width: '20%',
+                        bgcolor: alpha(theme.palette.primary.main, 0.4 - (i * 0.1)),
+                        borderRadius: 4,
+                        animation: `pulse 1.5s ease-in-out ${i * 0.3}s infinite`
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </Paper>
           </Box>
         ) : error ? (
           <Box 

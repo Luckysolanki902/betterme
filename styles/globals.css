@@ -222,3 +222,23 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 0;
   transition: opacity 200ms;
 }
+
+/* Loading animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scaleX(1);
+  }
+  50% {    opacity: 0.8;
+    transform: scaleX(1.1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

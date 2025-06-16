@@ -331,11 +331,77 @@ const JournalPage = () => {
         reject(error);
       });
   };
+  
+  // Handle mood updates from JournalEditor
+  const handleUpdateMood = async (content, forceUpdate = false) => {
+    try {
+      // Only proceed if we have content and it's an array
+      if (!Array.isArray(content) || content.length === 0) {
+        console.warn('Invalid content format for mood detection');
+        return;
+      }
+      
+      // Call the detect-mood API
+      const moodResponse = await fetch('/api/journal/detect-mood', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      
+      if (!moodResponse.ok) {
+        throw new Error(`Mood detection failed: ${moodResponse.status}`);
+      }
+      
+      const moodData = await moodResponse.json();
+      
+      if (moodData && moodData.mood) {
+        // Set timestamp for cooldowns
+        moodData.mood.lastAnalyzed = new Date().toISOString();
+        moodData.mood.lastAnalyzedTimestamp = Date.now();
+        moodData.mood.aiDetected = true;
+        
+        // Update the entry with the new mood
+        const updatedEntry = {
+          ...currentEntry,
+          mood: moodData.mood
+        };
+        
+        // Update the current entry in state
+        setCurrentEntry(updatedEntry);
+        
+        // If this is the current day's entry, also update it in the entriesByDate object
+        const dateKey = dayjs(selectedDate).format('YYYY-MM-DD');
+        setEntriesByDate(prev => ({
+          ...prev,
+          [dateKey]: updatedEntry
+        }));
+        
+        // If we have an existing entry, save the mood to the API
+        if (currentEntry && currentEntry._id) {
+          // Save the updated entry
+          await fetch(`/api/journal/${currentEntry._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mood: moodData.mood })
+          });
+        }
+        
+        // Set mood detected flag to true (will be reset by timer in component)
+        setMoodDetected(true);
+        setTimeout(() => setMoodDetected(false), 10000);
+        
+        return moodData.mood;
+      }
+    } catch (error) {
+      console.error('Error updating mood:', error);
+    }
+  };
  
-    // Create new journal entry for today
+  // Create new journal entry for today
   const handleCreateTodaysEntry = () => {
     const today = dayjs();
-    setSelectedDate(today);    setCurrentEntry(null);
+    setSelectedDate(today);
+    setCurrentEntry(null);
     setEditorOpen(true);
   };
   
@@ -422,8 +488,28 @@ const JournalPage = () => {
               </Typography>
               
               {statsLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
+                <Box sx={{ py: 3 }}>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      p: 3, 
+                      textAlign: 'center', 
+                      borderRadius: 2,
+                      backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                      backdropFilter: 'blur(8px)',
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <CircularProgress size={30} sx={{ opacity: 0.7 }} />
+                    </Box>
+                    <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 500 }}>
+                      Preparing your journal insights...
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1, opacity: 0.7 }}>
+                      We're analyzing your writing patterns and journaling habits
+                    </Typography>
+                  </Paper>
                 </Box>
               ) : (
                 <JournalStats stats={stats} />
@@ -453,6 +539,7 @@ const JournalPage = () => {
               entry={currentEntry}
               onSave={handleSaveEntry}
               onClose={() => setEditorOpen(false)}
+              onUpdateMood={handleUpdateMood}
           />
         </DialogContent>
       </Dialog>
