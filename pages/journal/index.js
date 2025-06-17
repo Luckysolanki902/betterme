@@ -522,14 +522,18 @@ const JournalPage = () => {
         <Dialog
           open={editorOpen}
           onClose={() => setEditorOpen(false)}
-          maxWidth="md"
           fullWidth
-          fullScreen={isMobile}
+          fullScreen
           PaperProps={{
             elevation: 3,
             sx: {
               borderRadius: { xs: 0, sm: 2 },
-              maxHeight: '90vh'
+              maxHeight: '85vh',
+              maxWidth: '95vw',
+              margin: { xs: '16px auto', sm: '16px auto' },
+              height: 'calc(100% - 128px)',
+              position: 'absolute',
+              top: 0
             }
           }}
         >
@@ -540,10 +544,10 @@ const JournalPage = () => {
               onSave={handleSaveEntry}
               onClose={() => setEditorOpen(false)}
               onUpdateMood={handleUpdateMood}
-          />
-        </DialogContent>
-      </Dialog>
-        {/* Floating Action Button for New Entry */}
+            />
+          </DialogContent>
+        </Dialog>
+        {/* Floating Action
       <Tooltip title="Write today's entry">
         <Fab 
           color="primary" 

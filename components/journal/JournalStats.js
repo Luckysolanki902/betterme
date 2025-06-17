@@ -8,12 +8,12 @@ import MoodDisplay from './MoodDisplay';
 // Stats card for journal metrics
 const StatCard = ({ value, label, color }) => {
   const theme = useTheme();
-  
+
   return (
-    <Paper 
+    <Paper
       elevation={0}
       className={styles.statCard}
-      sx={{ 
+      sx={{
         backgroundColor: alpha(color, 0.05),
         borderLeft: `4px solid ${color}`,
       }}
@@ -42,7 +42,7 @@ const JournalStats = ({ stats }) => {
     mostCommonMood = { label: 'neutral', score: 5 },
     moodCounts = { neutral: { count: 0, score: 5 } }
   } = safeStats;
-  
+
   // Get mood color based on mood score
   const getMoodColor = (score) => {
     if (score >= 8) return theme.palette.success.main; // Happy/Excited
@@ -53,39 +53,39 @@ const JournalStats = ({ stats }) => {
 
   return (
     <Box className={styles.statsContainer}>
-      <StatCard 
-        value={totalEntries} 
-        label="Total Entries" 
+      <StatCard
+        value={totalEntries}
+        label="Total Entries"
         color={theme.palette.primary.main}
       />
-      
-      <StatCard 
-        value={currentStreak} 
-        label="Current Streak (Days)" 
+
+      <StatCard
+        value={currentStreak}
+        label="Current Streak (Days)"
         color={theme.palette.secondary.main}
       />
-      
-      <StatCard 
-        value={longestStreak} 
-        label="Longest Streak (Days)" 
+
+      <StatCard
+        value={longestStreak}
+        label="Longest Streak (Days)"
         color={theme.palette.success.main}
       />
-      
-      <StatCard 
-        value={totalWords} 
-        label="Total Words Written" 
+
+      <StatCard
+        value={totalWords}
+        label="Total Words Written"
         color={theme.palette.info.main}
       />
-      
-      <StatCard 
-        value={avgWordsPerEntry} 
-        label="Avg. Words Per Entry" 
+
+      <StatCard
+        value={avgWordsPerEntry}
+        label="Avg. Words Per Entry"
         color={theme.palette.warning.main}
       />
-        <Paper 
+      <Paper
         elevation={0}
         className={styles.statCard}
-        sx={{ 
+        sx={{
           backgroundColor: alpha(getMoodColor(mostCommonMood.score), 0.05),
           borderLeft: `4px solid ${getMoodColor(mostCommonMood.score)}`,
         }}
@@ -95,16 +95,15 @@ const JournalStats = ({ stats }) => {
         </Typography>
         <Box sx={{ my: 1, display: 'flex', justifyContent: 'center' }}>
           <MoodDisplay mood={mostCommonMood} size="large" />
-        </Box>        <Typography variant="body1" sx={{ color: getMoodColor(mostCommonMood.score), textAlign: 'center' }}>
-          {mostCommonMood.label.charAt(0).toUpperCase() + mostCommonMood.label.slice(1)}
-        </Typography>      </Paper>
-      
+        </Box>
+      </Paper>
+
       {/* Mood Distribution Section */}
       {totalEntries > 0 && (
-        <Paper 
+        <Paper
           elevation={0}
           className={styles.statCard}
-          sx={{ 
+          sx={{
             backgroundColor: alpha(theme.palette.primary.light, 0.05),
             borderLeft: `4px solid ${theme.palette.primary.light}`,
             gridColumn: '1 / -1',
@@ -115,36 +114,36 @@ const JournalStats = ({ stats }) => {
           <Typography variant="body2" className={styles.statLabel}>
             Mood Distribution
           </Typography>
-            <Box className={styles.moodDistribution}>            {Object.entries(moodCounts).map(([moodName, data]) => {
-              // Ensure data has valid score and count properties
-              const safeData = {
-                score: (data && typeof data.score === 'number' && !isNaN(data.score)) ? data.score : 5,
-                count: (data && typeof data.count === 'number' && !isNaN(data.count)) ? data.count : 0
-              };
-              
-              return (
-                <Box 
-                  key={moodName}
-                  className={styles.moodItem}
-                >
-                  <MoodDisplay 
-                    mood={{ label: moodName, score: safeData.score }} 
-                    size="small"
-                  />
-                  <Typography variant="caption" sx={{ mt: 1 }}>
-                    {moodName}
+          <Box className={styles.moodDistribution}>            {Object.entries(moodCounts).map(([moodName, data]) => {
+            // Ensure data has valid score and count properties
+            const safeData = {
+              score: (data && typeof data.score === 'number' && !isNaN(data.score)) ? data.score : 5,
+              count: (data && typeof data.count === 'number' && !isNaN(data.count)) ? data.count : 0
+            };
+
+            return (
+              <Box
+                key={moodName}
+                className={styles.moodItem}
+              >
+                <MoodDisplay
+                  mood={{ label: moodName, score: safeData.score }}
+                  size="small"
+                />
+                <Typography variant="caption" sx={{ mt: 1 }}>
+                  {moodName}
+                </Typography>
+                <Typography className={styles.moodCount}>
+                  {safeData.count}
+                </Typography>
+                {totalEntries > 0 && (
+                  <Typography className={styles.moodPercentage}>
+                    {Math.round((safeData.count / totalEntries) * 100)}%
                   </Typography>
-                  <Typography className={styles.moodCount}>
-                    {safeData.count}
-                  </Typography>
-                  {totalEntries > 0 && (
-                    <Typography className={styles.moodPercentage}>
-                      {Math.round((safeData.count / totalEntries) * 100)}%
-                    </Typography>
-                  )}
-                </Box>
-              );
-            })}
+                )}
+              </Box>
+            );
+          })}
           </Box>
         </Paper>
       )}

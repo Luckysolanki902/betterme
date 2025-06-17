@@ -10,15 +10,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Tooltip,
-  Divider,
-  Chip,
   CircularProgress,
   Snackbar,
   Alert,
-  Menu,
-  MenuItem,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   useTheme,
   alpha,
   useMediaQuery
@@ -32,10 +30,11 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import CloseIcon from '@mui/icons-material/Close';
 import TitleIcon from '@mui/icons-material/Title';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SaveIcon from '@mui/icons-material/Save';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import EditIcon from '@mui/icons-material/Edit';
 import dayjs from 'dayjs';
 import styles from './JournalStyles.module.css';
 import MoodDisplay from './MoodDisplay';
@@ -51,30 +50,28 @@ const JournalEditor = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
-  // State for journal entry data
+    // State for journal entry data
   const [title, setTitle] = useState(entry?.title || '');
   const [content, setContent] = useState(entry?.content || [{ type: 'paragraph', content: '' }]);
-  const [tags, setTags] = useState(entry?.tags || []);
-  const [newTag, setNewTag] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState('');
-  
   // State for suggestions
   const [suggestionDialog, setSuggestionDialog] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-  const [autoSuggestion, setAutoSuggestion] = useState('');
-  const [showAutoSuggestion, setShowAutoSuggestion] = useState(false);
+  const [autoSuggestion, setAutoSuggestion] = useState("Let your thoughts flow — fresh writing prompts appear every 30 seconds to guide your journey.");
+  const [showAutoSuggestion, setShowAutoSuggestion] = useState(true); // Always show footer
   const [loadingAutoSuggestion, setLoadingAutoSuggestion] = useState(false);
   
-  // State for tag management
-  const [tagMenuAnchorEl, setTagMenuAnchorEl] = useState(null);
-  const [selectedTagIndex, setSelectedTagIndex] = useState(null);
-  
+  // Default suggestions to show when no AI suggestion is available
+  const defaultSuggestions = [
+  "Let your thoughts flow — fresh writing prompts appear every 30 seconds to guide your journey."
+  ];
   // State for mood management
   const [isManuallyUpdatingMood, setIsManuallyUpdatingMood] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const [isAISuggestion, setIsAISuggestion] = useState(false); // Track if current suggestion is from AI
   
   // Refs for timers and other non-reactive data
   const editorRef = useRef(null);
@@ -83,27 +80,24 @@ const JournalEditor = ({
   const suggestionChangeTimer = useRef(null);
   const autoSaveInterval = useRef(null);
   const autoMoodUpdateInterval = useRef(null);
-  
-  // Constants
+  const typingTimer = useRef(null);  // Constants
   const MOOD_UPDATE_COOLDOWN = 10000; // 10 seconds
-  const AUTO_SUGGESTION_DELAY = 20000; // 20 seconds between suggestion refreshes
-  const CONTENT_CHANGE_SUGGESTION_DELAY = 3000; // 3 seconds after content changes
+  const AUTO_SUGGESTION_DELAY = 30000; // 30 seconds between suggestion refreshes
+  const CONTENT_CHANGE_SUGGESTION_DELAY = 10000; // 10 seconds after content changes
   const AUTOSAVE_DELAY = 30000; // 30 seconds for auto-save
-  const AUTO_MOOD_UPDATE_DELAY = 45000; // 45 seconds for auto mood update
+  const AUTO_MOOD_UPDATE_DELAY = 45000; // 45 seconds for auto mood update= 45000
 
-  // Effect to update local state when entry prop changes
+  // Get random default suggestion
+  const getRandomDefaultSuggestion = useCallback(() => {
+    return defaultSuggestions[Math.floor(Math.random() * defaultSuggestions.length)];  }, [defaultSuggestions]);
+
+  // Effect to update local state when entry prop changes - but only once initially
   useEffect(() => {
-    if (entry) {
+    if (entry && !hasChanges) {
       setTitle(entry.title || '');
       setContent(entry.content || [{ type: 'paragraph', content: '' }]);
-      setTags(entry.tags || []);
-    } else {
-      // Reset if no entry
-      setTitle('');
-      setContent([{ type: 'paragraph', content: '' }]);
-      setTags([]);
     }
-  }, [entry]);
+  }, [entry]); // Removed isUserTyping dependency to prevent constant overrides
   
   // Calculate word count from content blocks
   const calculateWordCount = useCallback(() => {
@@ -131,13 +125,12 @@ const JournalEditor = ({
     setError('');
     
     try {
-      const wordCount = calculateWordCount();
-      const entryData = {
+      const wordCount = calculateWordCount();      const entryData = {
         entryDate: date,
         title,
         content,
         mood: entry?.mood || DEFAULT_MOOD,
-        tags,
+        tags: [], // Remove tags
         wordCount,
         forceMoodUpdate: isManualSave,
       }
@@ -150,9 +143,8 @@ const JournalEditor = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasChanges, date, title, content, entry?.mood, tags, onSave, calculateWordCount]);
-
-  // Auto-save and auto-mood update logic
+  }, [hasChanges, date, title, content, entry?.mood, onSave, calculateWordCount]);
+  // Auto-save, auto-mood update, and auto-suggestion logic
   useEffect(() => {
     if (hasChanges) {
       // Clear previous auto-save timer
@@ -183,7 +175,6 @@ const JournalEditor = ({
       if (autoMoodUpdateInterval.current) clearTimeout(autoMoodUpdateInterval.current);
     };
   }, [hasChanges, handleSave, calculateWordCount, onUpdateMood, entry?.mood, content]);
-
   // Update hasChanges flag when content changes
   useEffect(() => {
     // Only set hasChanges if it's not the initial load with existing entry data
@@ -191,10 +182,8 @@ const JournalEditor = ({
     const currentContent = JSON.stringify(content);
     const initialTitle = entry?.title || '';
     const currentTitle = title;
-    const initialTags = JSON.stringify(entry?.tags || []);
-    const currentTags = JSON.stringify(tags);
 
-    if (initialContent !== currentContent || initialTitle !== currentTitle || initialTags !== currentTags) {
+    if (initialContent !== currentContent || initialTitle !== currentTitle) {
       setHasChanges(true);
       
       // When content changes substantially, update suggestions after a delay
@@ -220,7 +209,7 @@ const JournalEditor = ({
         clearTimeout(suggestionChangeTimer.current);
       }
     };
-  }, [title, content, tags, entry, calculateWordCount]);
+  }, [title, content, entry, calculateWordCount]);
   
   // Set up timer to periodically fetch writing suggestions
   useEffect(() => {
@@ -248,8 +237,14 @@ const JournalEditor = ({
       if (initialTimer) {
         clearTimeout(initialTimer);
       }
+    };  }, [calculateWordCount]);
+
+  // Cleanup typing timer on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
     };
-  }, [calculateWordCount]);
+  }, []);
 
   // Handle manual mood update
   const handleManualMoodUpdate = async () => {
@@ -272,7 +267,6 @@ const JournalEditor = ({
       setIsManuallyUpdatingMood(false);
     }
   };
-
   // Enhanced block addition with empty block replacement (like Notion)
   const handleAddBlock = (type, index = content.length) => {
     const newBlock = { type, content: '' };
@@ -325,11 +319,33 @@ const JournalEditor = ({
         newBlock,
         ...prevContent.slice(index)
       ]);
+      
+      // For lists, always ensure there's a paragraph after the list
+      if ((type === 'bulletList' || type === 'numberedList') && 
+          (index === content.length || content[index]?.type !== 'paragraph')) {
+        setTimeout(() => {
+          setContent(prevContent => [
+            ...prevContent.slice(0, index + 1),
+            { type: 'paragraph', content: '' },
+            ...prevContent.slice(index + 1)
+          ]);
+        }, 0);
+      }
     }
   };
-  
-  // Handle updating a content block
+    // Handle updating a content block
   const handleUpdateBlock = (index, updatedBlock) => {
+    // Set typing flag to prevent content override
+    setIsUserTyping(true);
+    
+    // Clear existing typing timer
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    
+    // Set timer to reset typing flag after user stops typing
+    typingTimer.current = setTimeout(() => {
+      setIsUserTyping(false);
+    }, 5000); // 5 seconds after stopping typing
+    
     setContent(prevContent => {
       const newContent = [...prevContent];
       newContent[index] = updatedBlock;
@@ -587,8 +603,7 @@ const JournalEditor = ({
       }
     }
   };
-  
-  // Function to fetch automatic writing suggestions
+    // Function to fetch automatic writing suggestions
   const fetchAutoSuggestion = async () => {
     // Don't fetch if we're already loading or there's not enough content
     if (loadingAutoSuggestion || calculateWordCount() < 20) return;
@@ -621,20 +636,27 @@ const JournalEditor = ({
       
       if (!response.ok) throw new Error('Failed to get suggestions');
       
-      const data = await response.json();
-      if (data.suggestions && data.suggestions.length > 0) {
-        setAutoSuggestion(data.suggestions[0]);
-        setShowAutoSuggestion(true);
+      const data = await response.json();      if (data.suggestions && data.suggestions.length > 0) {
+        const newSuggestion = data.suggestions[0];
+        // Only update if it's different from current suggestion
+        if (newSuggestion !== autoSuggestion) {
+          setAutoSuggestion(newSuggestion);
+          setIsAISuggestion(true);
+          setShowAutoSuggestion(true);
+        }
       }
     } catch (err) {
       console.error('Error getting auto suggestions:', err);
-      // Don't show error to user for this background feature
+      // Fallback to default suggestion if AI fails
+      if (!autoSuggestion) {
+        setAutoSuggestion(getRandomDefaultSuggestion());
+        setIsAISuggestion(false);
+      }
     } finally {
       setLoadingAutoSuggestion(false);
     }
   };
-  
-  // Get writing suggestions for dialog
+    // Get writing suggestions for dialog
   const getWritingSuggestions = async (type = 'continue') => {
     setLoadingSuggestions(true);
     setSuggestions([]);
@@ -656,7 +678,15 @@ const JournalEditor = ({
       
       if (!response.ok) throw new Error('Failed to get suggestions');
       const data = await response.json();
-      setSuggestions(data.suggestions || []);
+      const newSuggestions = data.suggestions || [];
+      setSuggestions(newSuggestions);
+        // Update the auto suggestion with the first suggestion if available
+      if (newSuggestions.length > 0 && newSuggestions[0] !== autoSuggestion) {
+        setAutoSuggestion(newSuggestions[0]);
+        setIsAISuggestion(true);
+        setShowAutoSuggestion(true);
+      }
+      
       setSuggestionDialog(true);
     } catch (err) {
       console.error('Error getting writing suggestions:', err);
@@ -670,34 +700,19 @@ const JournalEditor = ({
   const useSuggestion = (suggestion) => {
     const newBlock = { type: 'paragraph', content: suggestion };
     setContent(prevContent => [...prevContent, newBlock]);
-    setSuggestionDialog(false);
-  };
+    setSuggestionDialog(false);  };
 
   // Use the auto suggestion by appending it to the content
   const useAutoSuggestion = () => {
     const newBlock = { type: 'paragraph', content: autoSuggestion };
     setContent(prevContent => [...prevContent, newBlock]);
-    setShowAutoSuggestion(false);
+    // Get a new random suggestion after using one
+    setAutoSuggestion(getRandomDefaultSuggestion());
   };
-  
-  // Handle adding a new tag
-  const handleAddTag = () => {
-    const tag = newTag.trim();
-    if (!tag) return;
-    
-    if (!tags.includes(tag)) {
-      setTags([...tags, tag]);
-    }
-    setNewTag('');
-  };
-  
-  // Handle deleting a tag
-  const handleDeleteTag = (index) => {
-    const updatedTags = [...tags];
-    updatedTags.splice(index, 1);
-    setTags(updatedTags);
-    setTagMenuAnchorEl(null);
-    setSelectedTagIndex(null);
+
+  // Get next suggestion
+  const getNextSuggestion = () => {
+    setAutoSuggestion(getRandomDefaultSuggestion());
   };
   
   // Improved text formatting with correct cursor placement and block updates
@@ -921,8 +936,7 @@ const JournalEditor = ({
             />
           </Box>
         );
-        
-      case 'bulletList':
+          case 'bulletList':
       case 'numberedList':
         return (
           <Box key={index} className="journal-content-block" data-block-id={index} sx={{ pl: 3, mb: 2 }}>
@@ -965,16 +979,36 @@ const JournalEditor = ({
                 </IconButton>
               </Box>
             ))}
-            <Button 
-              startIcon={<AddCircleOutlineIcon />}
-              onClick={() => {
-                const newListItems = [...block.listItems, { content: '', checked: false }];
-                handleUpdateBlock(index, { ...block, listItems: newListItems });
-              }}
-              sx={{ ml: 3, mt: 1, textTransform: 'none' }}
-            >
-              Add Item
-            </Button>
+            {/* Always add a paragraph after the list for continuation */}
+            {index === content.length - 1 || content[index + 1]?.type !== 'paragraph' ? (
+              <Button 
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={() => {
+                  // First add another list item
+                  const newListItems = [...block.listItems, { content: '', checked: false }];
+                  handleUpdateBlock(index, { ...block, listItems: newListItems });
+                  
+                  // Then ensure there's a paragraph after the list
+                  if (index === content.length - 1 || content[index + 1]?.type !== 'paragraph') {
+                    handleAddBlock('paragraph', index + 1);
+                  }
+                }}
+                sx={{ ml: 3, mt: 1, textTransform: 'none' }}
+              >
+                Add Item
+              </Button>
+            ) : (
+              <Button 
+                startIcon={<AddCircleOutlineIcon />}
+                onClick={() => {
+                  const newListItems = [...block.listItems, { content: '', checked: false }];
+                  handleUpdateBlock(index, { ...block, listItems: newListItems });
+                }}
+                sx={{ ml: 3, mt: 1, textTransform: 'none' }}
+              >
+                Add Item
+              </Button>
+            )}
           </Box>
         );
         
@@ -1021,8 +1055,7 @@ const JournalEditor = ({
           boxShadow: 'none',
           minHeight: '60vh'
         }}
-      >
-        {/* Header with date and actions */}
+      >        {/* Header with date and actions */}
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between',
@@ -1063,6 +1096,18 @@ const JournalEditor = ({
                 )}
               </Box>
             </Box>
+            
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+              onClick={() => handleSave(true)}
+              disabled={isSaving || !hasChanges}
+              sx={{ mr: 1 }}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
           
             <Button 
               variant="outlined"
@@ -1075,13 +1120,25 @@ const JournalEditor = ({
           </Box>
         </Box>
         
-        {/* Journal title input */}
-        <TextField
+        {/* Journal title input */}        <TextField
           fullWidth
           placeholder="Title (optional)"
           variant="standard"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            // Set typing flag to prevent content override
+            setIsUserTyping(true);
+            
+            // Clear existing typing timer
+            if (typingTimer.current) clearTimeout(typingTimer.current);
+            
+            // Set timer to reset typing flag after user stops typing
+            typingTimer.current = setTimeout(() => {
+              setIsUserTyping(false);
+            }, 5000); // 5 seconds after stopping typing
+            
+            setTitle(e.target.value);
+          }}
           InputProps={{
             disableUnderline: true,
             sx: {
@@ -1143,9 +1200,9 @@ const JournalEditor = ({
                 </IconButton>
               </Tooltip>
               
-              <div className={styles.toolbarDivider} />
+              {/* <div className={styles.toolbarDivider} /> */}
               
-              <Tooltip title="Bold">
+              {/* <Tooltip title="Bold">
                 <IconButton size="small" onClick={() => applyFormatting('bold')}>
                   <FormatBoldIcon />
                 </IconButton>
@@ -1161,7 +1218,7 @@ const JournalEditor = ({
                 <IconButton size="small" onClick={() => applyFormatting('underline')}>
                   <FormatUnderlinedIcon />
                 </IconButton>
-              </Tooltip>
+              </Tooltip> */}
               
               <div className={styles.toolbarDivider} />
               
@@ -1186,8 +1243,7 @@ const JournalEditor = ({
               </Tooltip>
               
               <div className={styles.toolbarDivider} />
-              
-              <Tooltip title="Get writing suggestions">
+                <Tooltip title="Get writing suggestions">
                 <IconButton 
                   size="small" 
                   onClick={() => getWritingSuggestions('question')}
@@ -1197,90 +1253,13 @@ const JournalEditor = ({
                   <LightbulbOutlinedIcon />
                 </IconButton>
               </Tooltip>
-              
-              <Box sx={{ flexGrow: 1 }} />
-              
-              <Tooltip title="Add tags">
-                <IconButton size="small" color="info">
-                  <LocalOfferIcon />
-                </IconButton>
-              </Tooltip>
             </Box>
             
             {/* Content blocks */}
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, minHeight: '40vh', position: 'relative' }}>
               {content.map((block, index) => renderBlock(block, index))}
             </Box>
           </Paper>
-          
-          {/* Tags section */}
-          <Box sx={{ mt: 2, mb: 4 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Tags
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {tags.map((tag, index) => (
-                <Chip
-                  key={index}
-                  label={tag}
-                  size="small"
-                  onDelete={() => handleDeleteTag(index)}
-                  onClick={(e) => {
-                    setTagMenuAnchorEl(e.currentTarget);
-                    setSelectedTagIndex(index);
-                  }}
-                />
-              ))}
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                <TextField
-                  placeholder="Add tag..."
-                  variant="outlined"
-                  size="small"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddTag();
-                      e.preventDefault();
-                    }
-                  }}
-                  sx={{ maxWidth: 150 }}
-                />
-                
-                <Button
-                  variant="text"
-                  onClick={handleAddTag}
-                  disabled={!newTag.trim()}
-                  sx={{ minWidth: 0 }}
-                >
-                  Add
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-            <Button
-              variant="outlined"
-              startIcon={<LightbulbOutlinedIcon />}
-              onClick={() => getWritingSuggestions('question')}
-              disabled={loadingSuggestions}
-            >
-              Get Reflection Questions
-            </Button>
-            
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-              onClick={() => handleSave(true)}
-              disabled={isSaving || !hasChanges}
-            >
-              {isSaving ? 'Saving...' : 'Save Entry'}
-            </Button>
-          </Box>
         </Box>
       </Paper>
       
@@ -1346,64 +1325,159 @@ const JournalEditor = ({
         <Alert onClose={() => setError('')} severity="error">
           {error}
         </Alert>
-      </Snackbar>
-      
-      {/* Auto suggestion footer */}
+      </Snackbar>      {/* Beautiful Quote-like Auto suggestion footer */}
       {showAutoSuggestion && (
         <Paper 
-          elevation={4}
+          elevation={3}
           sx={{ 
             position: 'fixed',
             bottom: 0,
             left: 0,
-            right: 0,
-            py: 1.75,
-            px: 3,
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: theme.palette.background.paper,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            boxShadow: `0 -2px 10px rgba(0,0,0,0.1)`,
-            transition: 'all 0.3s ease'
+            right: 0,            zIndex: 1000,
+            background: theme.palette.background.paper, // Pure white background
+            borderTop: `3px solid ${theme.palette.primary.main}`,
+            boxShadow: `0 -8px 32px ${alpha(theme.palette.primary.main, 0.12)}`,
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            maxHeight: '120px',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            }
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, maxWidth: '75%' }}>
-            <LightbulbOutlinedIcon 
-              color="primary"
-              sx={{ mt: 0.5, animation: 'pulse 2s infinite', opacity: 0.9 }}
-            />
-            <Box>
-              <Typography variant="subtitle2" color="primary.main" sx={{ mb: 0.5 }}>
-                Writing suggestion:
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            p: 3,
+            position: 'relative',
+            ...(isMobile && {
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 2,
+              p: 2
+            })
+          }}>
+            {/* Quote-like left section */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              gap: 1.5, 
+              flex: 1, 
+              minWidth: 0,
+              position: 'relative',
+              width: isMobile ? '100%' : 'auto'
+            }}>
+              {/* Opening quote mark */}
+              <Typography
+                sx={{
+                  fontSize: isMobile ? '2rem' : '2.5rem',
+                  color: theme.palette.primary.main,
+                  fontFamily: 'Georgia, serif',
+                  lineHeight: 1,
+                  opacity: 0.6,
+                  mt: -0.5,
+                  mr: -0.5,
+                  flexShrink: 0
+                }}
+              >
+                "
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                {autoSuggestion.length > 150 
-                  ? `${autoSuggestion.substring(0, 150)}...` 
-                  : autoSuggestion}
-              </Typography>
+              
+              <Box sx={{ flex: 1, minWidth: 0, pt: 0.5 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: theme.palette.text.primary,
+                    fontStyle: 'italic',
+                    lineHeight: 1.5,
+                    fontSize: isMobile ? '0.9rem' : '1rem',
+                    fontFamily: 'Georgia, serif',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: isMobile ? 3 : 2,
+                    WebkitBoxOrient: 'vertical',
+                    position: 'relative',
+                    pr: 2,
+    
+                  }}
+                >
+                  {autoSuggestion.length > (isMobile ? 100 : 150) 
+                    ? `${autoSuggestion.substring(0, isMobile ? 100 : 150)}...` 
+                    : autoSuggestion}
+                </Typography>
+                
+             
+              </Box>
             </Box>
-          </Box>
-          
-          <Box>
-            <Button 
-              variant="text" 
-              size="small" 
-              onClick={() => setShowAutoSuggestion(false)}
-              sx={{ mr: 1 }}
-            >
-              Dismiss
-            </Button>
-            <Button 
-              variant="contained" 
-              size="small" 
-              color="primary"
-              onClick={useAutoSuggestion}
-              startIcon={<AddCircleOutlineIcon />}
-            >
-              Add to Journal
-            </Button>
+            
+            {/* Action buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5, 
+              flexShrink: 0,
+              ...(isMobile && {
+                width: '100%',
+                justifyContent: 'flex-end',
+                mt: -0.5
+              })
+            }}>
+              <Button 
+                variant="outlined" 
+                size="small" 
+                onClick={() => getWritingSuggestions('continue')}
+                disabled={loadingSuggestions}
+                sx={{
+                  borderRadius: '25px',
+                  textTransform: 'none',
+                  color: theme.palette.primary.main,
+                  borderColor: alpha(theme.palette.primary.main, 0.5),
+                  minWidth: 'auto',
+                  px: 2,
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                    borderColor: theme.palette.primary.main,
+                  }
+                }}
+              >
+                More Ideas
+              </Button>
+              
+              <Button 
+                variant="contained" 
+                size="small" 
+                color="primary"
+                onClick={useAutoSuggestion}
+                startIcon={<AddCircleOutlineIcon sx={{ fontSize: '1rem' }} />}
+                sx={{
+                  borderRadius: '25px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                  fontSize: '0.85rem',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  boxShadow: `0 3px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 5px 16px ${alpha(theme.palette.primary.main, 0.4)}`
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Add to Journal
+              </Button>
+            </Box>
           </Box>
         </Paper>
       )}
