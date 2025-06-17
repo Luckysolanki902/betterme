@@ -15,11 +15,15 @@ const handler = async (req, res) => {  // Get the user ID for authentication
   try {
     // Get the current journal content from the request body
     const { prompt, currentContent = '', type = 'continue' } = req.body;
-    
-    // Validate required fields
+      // Validate required fields
     if (!currentContent && type === 'continue') {
       return res.status(400).json({ 
-        error: 'Current content is required for continuing a journal entry' 
+        error: 'Current content is required for continuing a journal entry',
+        suggestions: [
+          "What emotions were most present for you today?",
+          "Describe a moment that challenged you and how you responded.", 
+          "What are you looking forward to tomorrow and why?"
+        ]
       });
     }
     
@@ -30,7 +34,7 @@ const handler = async (req, res) => {  // Get the user ID for authentication
       case 'start': 
         fullPrompt = `You are a helpful journaling assistant. Provide 3 thoughtful starting points for writing a journal entry.${
           prompt ? ` The user has indicated they want to write about: "${prompt}". ` : ' '
-        }Each starting point should be 1-2 sentences that the user can expand upon. Format as three numbered bullet points.`;
+        }Each starting point should be 1-2 sentences that the user can expand upon. Format as three numbered bullet points. If the user has written nothing yet, suggest general ideas like how to start with a journal today.`;
         break;
       
       case 'continue':

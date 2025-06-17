@@ -2,8 +2,29 @@
 import React from 'react';
 import { Box, Typography, Paper, useTheme, alpha } from '@mui/material';
 import CountUp from 'react-countup';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import styles from './JournalStyles.module.css';
 import MoodDisplay from './MoodDisplay';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 // Stats card for journal metrics
 const StatCard = ({ value, label, color }) => {
@@ -42,7 +63,6 @@ const JournalStats = ({ stats }) => {
     mostCommonMood = { label: 'neutral', score: 5 },
     moodCounts = { neutral: { count: 0, score: 5 } }
   } = safeStats;
-
   // Get mood color based on mood score
   const getMoodColor = (score) => {
     if (score >= 8) return theme.palette.success.main; // Happy/Excited
@@ -51,6 +71,76 @@ const JournalStats = ({ stats }) => {
     return theme.palette.error.main; // Negative
   };
 
+  // Prepare chart data
+  const chartData = {
+    labels: Object.keys(moodCounts),
+    datasets: [
+      {
+        data: Object.values(moodCounts).map(mood => mood.count || 0),
+        backgroundColor: [
+          alpha(theme.palette.success.main, 0.8),
+          alpha(theme.palette.info.main, 0.8),
+          alpha(theme.palette.warning.main, 0.8),
+          alpha(theme.palette.error.main, 0.8),
+          alpha(theme.palette.secondary.main, 0.8),
+          alpha(theme.palette.primary.main, 0.8),
+        ],
+        borderColor: [
+          theme.palette.success.main,
+          theme.palette.info.main,
+          theme.palette.warning.main,
+          theme.palette.error.main,
+          theme.palette.secondary.main,
+          theme.palette.primary.main,
+        ],
+        borderWidth: 2,
+        hoverBackgroundColor: [
+          alpha(theme.palette.success.main, 0.9),
+          alpha(theme.palette.info.main, 0.9),
+          alpha(theme.palette.warning.main, 0.9),
+          alpha(theme.palette.error.main, 0.9),
+          alpha(theme.palette.secondary.main, 0.9),
+          alpha(theme.palette.primary.main, 0.9),
+        ],
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+          font: {
+            size: 12,
+            family: 'inherit'
+          },
+          color: theme.palette.text.primary,
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+            return `${label}: ${value} entries (${percentage}%)`;
+          },
+        },
+        backgroundColor: alpha(theme.palette.background.paper, 0.95),
+        titleColor: theme.palette.text.primary,
+        bodyColor: theme.palette.text.primary,
+        borderColor: theme.palette.divider,
+        borderWidth: 1,
+      },
+    },
+    cutout: '60%',
+  };
   return (
     <Box className={styles.statsContainer}>
       <StatCard
@@ -71,99 +161,85 @@ const JournalStats = ({ stats }) => {
         color={theme.palette.success.main}
       />
 
-      <StatCard
-        value={totalWords}
-        label="Total Words Written"
-        color={theme.palette.info.main}
-      />
-
-      <StatCard
-        value={avgWordsPerEntry}
-        label="Avg. Words Per Entry"
-        color={theme.palette.warning.main}
-      />
-      <Paper
-        elevation={0}
-        className={styles.statCard}
-        sx={{
-          backgroundColor: alpha(getMoodColor(mostCommonMood.score), 0.05),
-          borderLeft: `4px solid ${getMoodColor(mostCommonMood.score)}`,
-        }}
-      >
-        <Typography variant="body2" className={styles.statLabel}>
-          Most Common Mood
-        </Typography>
-        <Box sx={{ my: 1, display: 'flex', justifyContent: 'center' }}>
-          <MoodDisplay mood={mostCommonMood} size="large" />
-        </Box>
-      </Paper>
-
-      {/* Mood Distribution Section */}
-      {totalEntries > 0 && (
+      {/* Beautiful Mood Chart */}
+      {totalEntries > 0 && Object.keys(moodCounts).length > 0 && (
         <Paper
           elevation={0}
-          className={styles.statCard}
           sx={{
-            backgroundColor: alpha(theme.palette.primary.light, 0.05),
-            borderLeft: `4px solid ${theme.palette.primary.light}`,
             gridColumn: '1 / -1',
-            padding: 2,
-            width: '100%',
+            p: 3,
+            borderRadius: 3,
+            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.02)})`,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.1)}`,
           }}
         >
-          <Typography variant="body2" className={styles.statLabel}>
-            Mood Distribution
+          <Typography 
+            variant="h6" 
+            gutterBottom 
+            sx={{ 
+              color: theme.palette.primary.main,
+              fontWeight: 600,
+              textAlign: 'center',
+              mb: 3
+            }}
+          >
+            📊 Mood Journey
           </Typography>
-          <Box className={styles.moodDistribution}>            {Object.entries(moodCounts).map(([moodName, data]) => {
-            // Ensure data has valid score and count properties
-            const safeData = {
-              score: (data && typeof data.score === 'number' && !isNaN(data.score)) ? data.score : 5,
-              count: (data && typeof data.count === 'number' && !isNaN(data.count)) ? data.count : 0
-            };
-
-            return (
-              <Box
-                key={moodName}
-                className={styles.moodItem}
-              >
-                <MoodDisplay
-                  mood={{ label: moodName, score: safeData.score }}
-                  size="small"
-                />
-                <Typography variant="caption" sx={{ mt: 1 }}>
-                  {moodName}
-                </Typography>
-                <Typography className={styles.moodCount}>
-                  {safeData.count}
-                </Typography>
-                {totalEntries > 0 && (
-                  <Typography className={styles.moodPercentage}>
-                    {Math.round((safeData.count / totalEntries) * 100)}%
-                  </Typography>
-                )}
-              </Box>
-            );
-          })}
+          
+          <Box sx={{ 
+            height: 300, 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative'
+          }}>
+            <Doughnut data={chartData} options={chartOptions} />
+            
+            {/* Center content */}
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none'
+            }}>
+              <Typography variant="h4" sx={{ 
+                color: theme.palette.primary.main,
+                fontWeight: 700 
+              }}>
+                {totalEntries}
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                color: theme.palette.text.secondary,
+                fontWeight: 500 
+              }}>
+                Total Entries
+              </Typography>
+            </Box>
+          </Box>
+          
+          {/* Mood summary */}
+          <Box sx={{ 
+            mt: 3, 
+            p: 2, 
+            borderRadius: 2, 
+            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              Most frequent mood:
+            </Typography>
+            <MoodDisplay mood={mostCommonMood} size="small" showLabel={true} />
           </Box>
         </Paper>
       )}
     </Box>
   );
-};
-
-// Helper to get emoji for mood
-const getMoodEmoji = (mood) => {
-  switch (mood.toLowerCase()) {
-    case 'happy': return '😊';
-    case 'calm': return '😌';
-    case 'excited': return '😄';
-    case 'neutral': return '😐';
-    case 'sad': return '😔';
-    case 'angry': return '😠';
-    case 'anxious': return '😰';
-    case 'tired': return '😴';
-    default: return '😐';
-  }
 };
 
 export default JournalStats;

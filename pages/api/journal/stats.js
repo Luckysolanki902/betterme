@@ -1,7 +1,7 @@
 // pages/api/journal/stats.js
 import connectToMongo from '@/middleware/connectToMongo';
 import JournalEntry from '@/models/JournalEntry';
-const { getUserId } = require('@/middleware/journalEncryption');
+const { getUserId, decryptJournalEntries } = require('@/middleware/journalEncryption');
 import dayjs from 'dayjs';
 
 // API handler for /api/journal/stats
@@ -11,7 +11,6 @@ const handler = async (req, res) => {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   try {    // Get the user ID for filtering
     const userId = getUserId(req);
     
@@ -21,10 +20,13 @@ const handler = async (req, res) => {
     // Get all entries sorted by date
     const entries = await JournalEntry.find({ userId })
       .sort({ entryDate: -1 })
-      .select('entryDate mood wordCount')
+      .select('entryDate mood wordCount content title')
       .lean();
     
-    // Calculate total words
+    // Decrypt the entries first to ensure accurate stats
+    const decryptedEntries = decryptJournalEntries(entries, userId);
+    
+    // Calculate total words from decrypted content
     let totalWords = 0;
     
     // Calculate most common mood
@@ -32,10 +34,13 @@ const handler = async (req, res) => {
     let maxMoodCount = 0;
     let mostCommonMood = { label: 'neutral', score: 5 };
     
-    // Process entry data
-    entries.forEach(entry => {
-      // Add to total words
-      totalWords += entry.wordCount || 0;
+    // Process decrypted entry data
+    decryptedEntries.forEach(entry => {
+      // Calculate actual word count from decrypted content
+      const content = entry.content || '';
+      const title = entry.title || '';
+      const actualWordCount = (content + ' ' + title).trim().split(/\s+/).filter(word => word.length > 0).length;
+      totalWords += actualWordCount;
       
       // Count moods
       const moodLabel = entry.mood?.label || 'neutral';
@@ -65,10 +70,9 @@ const handler = async (req, res) => {
     
     // Calculate current streak
     let currentStreak = 0;
-    let streakActive = false;
-      // Convert entries to dates only, ensuring unique dates and sorted descending
+    let streakActive = false;      // Convert entries to dates only, ensuring unique dates and sorted descending
     const entryDates = Array.from(new Set(
-      entries.map(entry => dayjs(entry.entryDate).startOf('day').toISOString())
+      decryptedEntries.map(entry => dayjs(entry.entryDate).startOf('day').toISOString())
     )).map(dateStr => dayjs(dateStr)).sort((a, b) => b.diff(a));
     
     // Check for today's entry

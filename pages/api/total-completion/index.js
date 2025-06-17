@@ -41,7 +41,7 @@ const handler = async (req, res) => {
       
       // Calculate improvement percentage
       const improvementRatio = config.totalPossibleScore > 0 
-        ? (config.totalScore / config.totalPossibleScore) * 100
+        ? (config.totalScore) / 100
         : 0;
         
       return res.status(200).json({ 

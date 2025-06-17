@@ -15,7 +15,9 @@ import {
   useMediaQuery,
   alpha,
   Paper,
-  Tooltip
+  Tooltip,
+  Grid,
+  Skeleton
 } from '@mui/material';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -396,14 +398,12 @@ const JournalPage = () => {
       console.error('Error updating mood:', error);
     }
   };
-   // Create new journal entry for today or edit existing one
+ 
+  // Create new journal entry for today
   const handleCreateTodaysEntry = () => {
     const today = dayjs();
-    const todayKey = today.format('YYYY-MM-DD');
-    const todaysEntry = entriesByDate[todayKey];
-    
     setSelectedDate(today);
-    setCurrentEntry(todaysEntry || null); // Set existing entry if available, null for new
+    setCurrentEntry(null);
     setEditorOpen(true);
   };
   
@@ -411,119 +411,57 @@ const JournalPage = () => {
   const handleOpenSuggestions = () => {
     setSuggestionsDialogOpen(true);
   };
-  
-  return (
+    return (
     <Layout>
       <Container maxWidth="lg" className={styles.journalContainer}>
-        <Box className={styles.pageHeader}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            My Journal
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Reflect, remember, and grow with daily journaling
-          </Typography>
-        </Box>
-          {/* Motivational Quote */}
-        <JournalQuote />
-        
-        {/* Today's Entry Action Button */}
-        <Box sx={{ mb: 3 }}>
-          <Paper
-            elevation={2}
+        {/* Header with Today's Entry Button */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          mb: 4,
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 2, sm: 0 }
+        }}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{ 
+                fontWeight: 700,
+                color: theme.palette.primary.main,
+                mb: 0.5
+              }}
+            >
+              My Journal
+            </Typography>
+            <Typography variant="body1" color="textSecondary">
+              Reflect, grow, and track your journey
+            </Typography>
+          </Box>
+          
+          {/* Today's Entry Button */}
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<EditIcon />}
+            onClick={handleCreateTodaysEntry}
             sx={{
-              p: 3,
               borderRadius: 3,
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              }
+              px: 3,
+              py: 1.5,
+              fontWeight: 600,
+              boxShadow: '0 8px 25px rgba(66, 99, 235, 0.25)',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              '&:hover': {
+                boxShadow: '0 12px 35px rgba(66, 99, 235, 0.35)',
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.3s ease'
             }}
           >
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2
-            }}>
-              <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    mb: 0.5
-                  }}
-                >
-                  {(() => {
-                    const today = dayjs();
-                    const todayKey = today.format('YYYY-MM-DD');
-                    const todaysEntry = entriesByDate[todayKey];
-                    return todaysEntry ? "Edit Today's Entry" : "Write Today's Entry";
-                  })()}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: theme.palette.text.secondary,
-                    opacity: 0.8
-                  }}
-                >
-                  {(() => {
-                    const today = dayjs();
-                    const todayKey = today.format('YYYY-MM-DD');
-                    const todaysEntry = entriesByDate[todayKey];
-                    return todaysEntry 
-                      ? `Continue your thoughts from ${today.format('MMMM D, YYYY')}`
-                      : `Capture your thoughts for ${today.format('MMMM D, YYYY')}`;
-                  })()}
-                </Typography>
-              </Box>
-              
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<EditIcon />}
-                onClick={handleCreateTodaysEntry}
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 2,
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-                  transition: 'all 0.2s ease-in-out',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                  }
-                }}
-              >
-                {(() => {
-                  const today = dayjs();
-                  const todayKey = today.format('YYYY-MM-DD');
-                  const todaysEntry = entriesByDate[todayKey];
-                  return todaysEntry ? "Edit Entry" : "Start Writing";
-                })()}
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
+            {entriesByDate[dayjs().format('YYYY-MM-DD')] ? 'Update Today\'s Entry' : 'Write Today\'s Entry'}
+          </Button>        </Box>
         
         {/* Error Alert */}
         {error && (
@@ -531,30 +469,102 @@ const JournalPage = () => {
             {error}
           </Alert>
         )}
-        
-        {/* Main Content Section */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', md: 'row' }, 
-          gap: 3,
-          mb: 4
-        }}>
+
+        {/* Main Content Grid */}
+        <Grid container spacing={3}>
           {/* Calendar Section */}
-          <Box sx={{ 
-            flex: '0 0 auto', 
-            width: { xs: '100%', md: '350px' }
-          }}>
-            <Paper
-              elevation={3} 
+          <Grid item xs={12} md={8}>
+            <Paper 
+              elevation={0}
               sx={{ 
-                borderRadius: 2,
-                overflow: 'hidden',
-                position: 'sticky',
-                top: '80px'
+                p: 3, 
+                borderRadius: 3,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.02)})`
               }}
             >
-              <Box sx={{ p: 2, bgcolor: theme.palette.primary.main, color: 'white' }}>
-                <Typography variant="h6" align="center">
+              {loading ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Skeleton variant="rectangular" width="100%" height={400} sx={{ borderRadius: 2, mb: 2 }} />
+                  <Skeleton variant="text" width="60%" />
+                  <Skeleton variant="text" width="40%" />
+                </Box>
+              ) : (
+                <>
+                  <Typography 
+                    variant="h6" 
+                    gutterBottom
+                    sx={{ 
+                      fontWeight: 600,
+                      color: theme.palette.primary.main,
+                      mb: 2
+                    }}
+                  >
+                    📅 Your Journal Calendar
+                  </Typography>
+                  <JournalCalendar
+                    currentMonth={currentMonth}
+                    selectedDate={selectedDate}
+                    daysWithEntries={daysWithEntries}
+                    onDateSelect={handleDateSelect}
+                    onMonthChange={handleMonthChange}
+                    isDateDisabled={isDateDisabled}
+                  />
+                </>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Stats and Quote Section */}
+          <Grid item xs={12} md={4}>
+            {/* Today's Quote */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 3, 
+                mb: 3,
+                borderRadius: 3,
+                border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}`,
+                background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.secondary.main, 0.02)})`
+              }}
+            >
+              <JournalQuote />
+            </Paper>
+
+            {/* Stats Section */}
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 3,
+                borderRadius: 3,
+                border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`,
+                background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.success.main, 0.02)})`
+              }}
+            >
+              <Typography 
+                variant="h6" 
+                gutterBottom
+                sx={{ 
+                  fontWeight: 600,
+                  color: theme.palette.success.main,
+                  mb: 2
+                }}
+              >
+                📊 Your Journey Stats
+              </Typography>
+              
+              {statsLoading ? (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: 2, mb: 2 }} />
+                  <Skeleton variant="text" width="80%" />
+                  <Skeleton variant="text" width="60%" />
+                </Box>
+              ) : (
+                <JournalStats stats={stats} />
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
                   Journal Calendar
                 </Typography>
               </Box>
@@ -616,8 +626,7 @@ const JournalPage = () => {
               )}
             </Paper>
           </Box>
-        </Box>
-        
+        </Box>        
         {/* Journal Entry Editor Dialog */}
         <Dialog
           open={editorOpen}

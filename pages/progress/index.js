@@ -33,12 +33,12 @@ const Progress = () => {
   const [trendData, setTrendData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasData, setHasData] = useState(true);
+  const [totalScore, setTotalScore] = useState({ improvement: 0, totalScore: 0, totalPossibleScore: 0 });
   const { currentStreak, longestStreak, dayCount } = useStreak();
 
   // Map tab value to period
   const tabToPeriod = ['day', 'week', 'month'];
   const currentPeriod = tabToPeriod[tabValue];
-
   // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
@@ -55,6 +55,21 @@ const Progress = () => {
     };
 
     fetchCategories();
+  }, []);
+
+  // Fetch total score data
+  useEffect(() => {
+    const fetchTotalScore = async () => {
+      try {
+        const res = await fetch('/api/total-completion');
+        const data = await res.json();
+        setTotalScore(data);
+      } catch (error) {
+        console.error('Error fetching total score:', error);
+      }
+    };
+
+    fetchTotalScore();
   }, []);
 
   // Fetch progress data when period or category changes
@@ -129,11 +144,93 @@ const Progress = () => {
           />
         </Box>
       );
-    }
+    }    const periodText = currentPeriod === 'day' ? 'Today' : 
+                      currentPeriod === 'week' ? 'This Week' : 'This Month';
 
-    const periodText = currentPeriod === 'day' ? 'Today' : 
-                      currentPeriod === 'week' ? 'This Week' : 'This Month';    return (
+    return (
       <Grid container spacing={{ xs: 2, sm: 3 }}>
+        {/* Hero Section - % Better Version */}
+        <Grid item xs={12}>
+          <Box
+            component={motion.div}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            sx={{
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              borderRadius: 4,
+              p: { xs: 3, sm: 4, md: 5 },
+              textAlign: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+              mb: 3,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'url("data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="20" cy="20" r="4"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                opacity: 0.1,
+              }
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{ 
+                color: 'white',
+                fontWeight: 500,
+                opacity: 0.9,
+                mb: 1
+              }}
+            >
+              You are
+            </Typography>
+            
+            <Typography
+              variant="h1"
+              sx={{ 
+                color: 'white',
+                fontWeight: 800,
+                fontSize: { xs: '3rem', sm: '4rem', md: '5rem' },
+                lineHeight: 0.9,
+                mb: 1,
+                textShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              }}
+            >
+              {parseFloat(totalScore.improvement || 0).toFixed(1)}%
+            </Typography>
+            
+            <Typography
+              variant="h4"
+              sx={{ 
+                color: 'white',
+                fontWeight: 600,
+                fontSize: { xs: '1.2rem', sm: '1.5rem', md: '2rem' },
+                mb: 2,
+                opacity: 0.95
+              }}
+            >
+              Better Version of Yourself
+            </Typography>
+            
+            <Typography
+              variant="body1"
+              sx={{ 
+                color: 'white',
+                opacity: 0.8,
+                maxWidth: '600px',
+                mx: 'auto',
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                lineHeight: 1.6
+              }}
+            >
+              Every task you complete is linear progress towards becoming your best self.
+              <br />
+            </Typography>
+          </Box>
+        </Grid>
         {/* Overall Completion Card */}
         <Grid item xs={12} sm={6} md={4}>
           <ProgressCard 
@@ -165,35 +262,7 @@ const Progress = () => {
           />
         </Grid>
 
-        {/* Day Count Card */}
-        <Grid item xs={12} sm={6} md={4}>
-          <ProgressCard 
-            title="Journey Progress"
-            value={dayCount}
-            suffix="days"
-            icon={
-              <DirectionsRunIcon sx={{ 
-                color: theme.palette.success.main 
-              }} />
-            }
-            animationDelay={0.3}
-          />
-        </Grid>        {/* Progress Insights */}
-        <Grid item xs={12} lg={6}>
-          <ProgressInsight
-            insights={progressData?.insights || {}}
-            period={currentPeriod}
-            animationDelay={0.4}
-          />
-        </Grid>
 
-        {/* Categories Breakdown */}
-        <Grid item xs={12} lg={6}>
-          <CategoriesChart 
-            data={progressData?.categoryData || []} 
-            animationDelay={0.5}
-          />
-        </Grid>
 
         {/* Progress Trend - Full Width on Mobile */}
         <Grid item xs={12}>
@@ -288,12 +357,7 @@ const Progress = () => {
         {/* Time period tabs */}
         <ProgressTabs value={tabValue} onChange={handleTabChange} />
         
-        {/* Category selector */}
-        <CategorySelector 
-          categories={categories} 
-          selectedCategory={selectedCategory}
-          onChange={handleCategoryChange}
-        />
+
         
         {/* Main content */}
         {renderProgressContent()}

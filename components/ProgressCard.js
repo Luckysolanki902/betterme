@@ -24,7 +24,7 @@ const ProgressCard = ({
 }) => {
   const theme = useTheme();
   const percentage = Math.round((value / maxValue) * 100) || 0;
-  
+  console.log(value, maxValue, percentage);
   // Get color based on completion percentage
   const getColorBasedOnProgress = () => {
     if (percentage >= 80) return theme.palette.success.main;

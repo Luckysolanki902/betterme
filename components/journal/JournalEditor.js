@@ -624,13 +624,12 @@ const JournalEditor = ({
         setLoadingAutoSuggestion(false);
         return;
       }
-      
-      const response = await fetch('/api/journal/suggestions', {
+        const response = await fetch('/api/journal/suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           currentContent: currentText.trim(),
-          type: 'continuation'
+          type: 'continue'
         })
       });
       
@@ -1429,12 +1428,10 @@ const JournalEditor = ({
                 justifyContent: 'flex-end',
                 mt: -0.5
               })
-            }}>
-              <Button 
+            }}>              <Button 
                 variant="outlined" 
                 size="small" 
-                onClick={() => getWritingSuggestions('continue')}
-                disabled={loadingSuggestions}
+                onClick={getNextSuggestion}
                 sx={{
                   borderRadius: '25px',
                   textTransform: 'none',
@@ -1450,7 +1447,7 @@ const JournalEditor = ({
                   }
                 }}
               >
-                More Ideas
+               {autoSuggestion === 'Let your thoughts flow — fresh writing prompts appear every 30 seconds to guide your journey.' ? 'Get Ideas Now' : 'More Ideas'}
               </Button>
               
               <Button 
