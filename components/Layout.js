@@ -104,7 +104,7 @@ const navItems = [
   { text: 'Planner', icon: <EditRoundedIcon />, path: '/planner' },
   { text: 'Journal', icon: <BookRoundedIcon />, path: '/journal' },
   { text: 'Progress', icon: <TimelineRoundedIcon />, path: '/progress' },
-  { text: 'Bug Report', icon: <BugReportIcon />, path: '/bug-report', public: true },
+  { text: 'Bug Report', icon: <BugReportIcon />, path: '/bug-report' },
   { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/settings' }
 ];
 
