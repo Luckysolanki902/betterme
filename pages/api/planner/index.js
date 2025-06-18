@@ -68,12 +68,12 @@ const handler = async (req, res) => {
           isStatic: isStatic || false,
           content: sanitizedContent,
           position: 0
-        };        // Encrypt all fields including content
+        };        // Encrypt only title and description, keep content as structured data
         let encryptedPageData = encryptFields(pageData, ENCRYPTED_FIELDS.PLANNER, userId);
         
-        // Process content array separately for nested elements if needed
-        if (Array.isArray(encryptedPageData.content) && encryptedPageData.content.length > 0) {
-          encryptedPageData.content = encryptedPageData.content.map(block => {
+        // Handle content array separately - keep the structure and encrypt only text content within each block
+        if (Array.isArray(pageData.content) && pageData.content.length > 0) {
+          encryptedPageData.content = pageData.content.map(block => {
             const encryptedBlock = { ...block };
             
             // Encrypt the content field in each block if it's a string
@@ -129,11 +129,11 @@ const handler = async (req, res) => {
             parentId,
             { $push: { childPages: savedPage._id } }
           );
-        }          // Decrypt all fields for consistency
+        }          // Decrypt only title and description, content is handled separately
         const pageObj = savedPage.toObject();
         let decryptedSavedPage = decryptFields(pageObj, ENCRYPTED_FIELDS.PLANNER, userId);
         
-        // Additional handling for content blocks if they still appear encrypted
+        // Handle content blocks decryption if they have encrypted text
         if (Array.isArray(decryptedSavedPage.content) && decryptedSavedPage.content.length > 0) {
           decryptedSavedPage.content = decryptedSavedPage.content.map(block => {
             const decryptedBlock = { ...block };

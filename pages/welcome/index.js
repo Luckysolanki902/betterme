@@ -69,30 +69,104 @@ const stats = [
   { number: "4.9★", label: "User Rating", icon: <Star /> }
 ];
 
-// Feature highlights
+// Feature highlights - comprehensive coverage
 const features = [
   {
     icon: <TrackChanges sx={{ fontSize: 50 }} />,
-    title: "Linear Progress, Not Compounding Illusions",
-    description: "Forget the misleading '1% compound growth' myth. Real personal growth is linear—you improve from your original baseline, not yesterday's version. Our scoring system reflects this reality: complete hard tasks (10 points each), medium tasks (5 points), and easy ones (1 point) to see genuine, measurable growth. Do 20 hard workouts in a month? That's 200 points—a solid, honest 2% improvement to the baseline you.",
-    color: "primary"
+    title: "Linear Progress Tracking: Real Growth, Real Numbers",
+    description: "Forget the misleading '1% compound growth' myth that sets impossible expectations. Real personal growth is linear—you improve from your original baseline, not yesterday's version. Our intelligent scoring system reflects this reality: complete hard tasks (10 points), medium tasks (5 points), and easy ones (1 point) to see genuine, measurable growth. Do 20 hard workouts in a month? That's 200 points—a solid, honest 2% improvement from baseline you. No inflation, no false promises—just real progress you can trust.",
+    color: "primary",
+    detailed: true
   },
   {
     icon: <Lightbulb sx={{ fontSize: 50 }} />,
-    title: "The Tarantino Method: Transform Overnight",
-    description: "One decisive evening can change everything. Following the Tarantino approach, dedicate a single night to honestly documenting what's wrong with your current life and what needs to change. By dawn, you'll have drafted actionable plans in our integrated Planner. The next day isn't about planning—it's about immediate execution. Create workout schedules, business plans, or creative endeavors without ever leaving your personal development environment.",
-    color: "secondary"
+    title: "The Tarantino Method: One Night, Complete Transformation",
+    description: "Inspired by how Quentin Tarantino writes entire screenplays in single intensive sessions, we believe one decisive evening can change everything. Dedicate a single night to honestly documenting what's wrong with your current life and what needs to change. By dawn, you'll have drafted actionable plans in our integrated Planner—workout schedules, business strategies, creative projects, or life overhauls. The next day isn't about planning anymore; it's about immediate, focused execution.",
+    color: "secondary",
+    detailed: true
   },
   {
     icon: <Psychology sx={{ fontSize: 50 }} />,
-    title: "Beat the Inconsistency Trap with Smart Journaling", 
-    description: "We all face emotional dips, motivation crashes, and the pull of old habits. The proven antidote? Writing. But staring at a blank page is paralyzing, so our AI-assisted Journal provides fresh prompts every 30 seconds, helping you articulate what you're feeling and why. The system automatically tags your mood patterns and correlates emotional states with productivity, showing you exactly when and why you fall off track. Writing doesn't just vent emotions—it prevents the downward spiral before it begins.",
-    color: "success"
+    title: "Smart Journaling: Break the Consistency Trap Forever", 
+    description: "We all face emotional dips, motivation crashes, and the magnetic pull of old habits. The proven antidote? Writing. But staring at a blank page is paralyzing, so our AI-assisted Journal provides fresh, thought-provoking prompts every 30 seconds. The system automatically tags your mood patterns, correlates emotional states with productivity scores, and reveals exactly when and why you fall off track. Writing doesn't just vent emotions—it prevents the downward spiral before it begins, giving you unprecedented self-awareness.",
+    color: "success",
+    detailed: true
   },
   {
     icon: <Analytics sx={{ fontSize: 50 }} />,
-    title: "Your Growth Journey, Beautifully Visualized",
-    description: "Motivation thrives on visible progress. Our comprehensive dashboard transforms your daily efforts into striking visual metrics—point totals steadily climbing, habit streaks lengthening, and mood patterns smoothing out over time. Clean, intuitive graphs convert your raw effort into meaningful insights. No more wondering if you're making progress—you'll see the proof in real-time, reinforcing your commitment and celebrating every milestone along your journey.",
+    title: "Beautiful Progress Visualization: See Your Story Unfold",
+    description: "Motivation thrives on visible progress, and our comprehensive dashboard transforms your daily efforts into striking visual narratives. Watch point totals steadily climb, habit streaks lengthen week by week, and mood patterns smooth out over time. Clean, intuitive graphs convert your raw effort into meaningful insights and actionable patterns. No more wondering if you're making progress—you'll see the proof in real-time, reinforcing your commitment and celebrating every milestone along your transformation journey.",
+    color: "info",
+    detailed: true
+  }
+];
+
+// Detailed feature sections
+const detailedFeatures = [
+  {
+    id: 'planner',
+    icon: <Lightbulb sx={{ fontSize: 60 }} />,
+    title: "Master Planner: Your Digital Command Center",
+    subtitle: "Where Big Dreams Meet Actionable Plans",
+    description: "Transform overwhelming goals into organized, achievable action plans with our sophisticated planner system.",
+    benefits: [
+      "Hierarchical page structure for complex projects",
+      "Rich text editing with embedded content",
+      "Task breakdown and milestone tracking", 
+      "Cross-referencing between related plans",
+      "Templates for common goal types"
+    ],
+    howToUse: [
+      "Start with a brain dump—write everything you want to change",
+      "Organize thoughts into themed pages (Fitness, Career, Relationships)",
+      "Break down big goals into weekly and daily actions",
+      "Use embedded pages to dive deep into specific strategies",
+      "Review and adjust your plans as you evolve"
+    ],
+    color: "secondary"
+  },
+  {
+    id: 'journal',
+    icon: <Psychology sx={{ fontSize: 60 }} />,
+    title: "Intelligent Journaling: Your Mental Clarity Engine", 
+    subtitle: "Never Lose Momentum Again",
+    description: "Combat inconsistency and emotional setbacks with AI-powered journaling that knows exactly what to ask when you're stuck.",
+    benefits: [
+      "AI prompts every 30 seconds when you're stuck",
+      "Automatic mood tracking and pattern recognition",
+      "Correlation analysis between emotions and productivity",
+      "Weakness identification through writing patterns",
+      "Consistency streak tracking and motivation"
+    ],
+    howToUse: [
+      "Open the journal when you feel confused or unmotivated",
+      "Start writing about anything—the AI will guide you",
+      "Let prompts help you explore deeper thoughts and feelings",
+      "Review mood trends to identify your vulnerable periods",
+      "Use insights to proactively manage emotional dips"
+    ],
+    color: "success"
+  },
+  {
+    id: 'progress',
+    icon: <Analytics sx={{ fontSize: 60 }} />,
+    title: "Progress Dashboard: Your Growth Observatory",
+    subtitle: "End-to-End Encrypted, Beautifully Visualized",
+    description: "See your entire transformation journey through stunning visualizations while knowing your data is completely private and secure.",
+    benefits: [
+      "Real-time progress tracking across all areas",
+      "Beautiful charts showing mood, habits, and growth trends",
+      "Streak tracking and milestone celebrations",
+      "Comparative analysis between different life areas",
+      "End-to-end encryption ensuring complete privacy"
+    ],
+    howToUse: [
+      "Check your dashboard daily for motivation and insights",
+      "Use trend analysis to optimize your approach",
+      "Celebrate milestones and maintain momentum",
+      "Identify patterns between different tracked metrics",
+      "Export data for deeper personal analysis"
+    ],
     color: "info"
   }
 ];
@@ -823,8 +897,221 @@ const WelcomePage = () => {
               </Grid>
             </Paper>
           </motion.div>
-        </Box>
-      </Container>
+        </Box>      </Container>
+
+      {/* Detailed Feature Sections */}
+      {detailedFeatures.map((feature, index) => (
+        <Container key={feature.id} maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <Paper
+              elevation={16}
+              sx={{
+                p: { xs: 4, md: 8 },
+                borderRadius: 6,
+                background: `linear-gradient(135deg, ${alpha(theme.palette[feature.color].main, 0.05)} 0%, ${alpha(theme.palette[feature.color].main, 0.02)} 100%)`,
+                border: `2px solid ${alpha(theme.palette[feature.color].main, 0.1)}`,
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {/* Background decoration */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 200,
+                  height: 200,
+                  borderRadius: '50%',
+                  background: alpha(theme.palette[feature.color].main, 0.03),
+                }}
+              />
+              
+              <Grid container spacing={6} alignItems="center">
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ mb: 4 }}>
+                    <Box
+                      sx={{
+                        color: theme.palette[feature.color].main,
+                        mb: 3,
+                        p: 2,
+                        borderRadius: 3,
+                        background: alpha(theme.palette[feature.color].main, 0.1),
+                        display: 'inline-flex'
+                      }}
+                    >
+                      {feature.icon}
+                    </Box>
+                    
+                    <Typography
+                      variant="h2"
+                      sx={{
+                        fontWeight: 900,
+                        mb: 2,
+                        color: theme.palette[feature.color].main,
+                        fontSize: { xs: '2rem', md: '2.5rem' }
+                      }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        mb: 3,
+                        fontWeight: 600,
+                        fontStyle: 'italic'
+                      }}
+                    >
+                      {feature.subtitle}
+                    </Typography>
+                    
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        color: theme.palette.text.primary,
+                        lineHeight: 1.7,
+                        fontSize: '1.2rem',
+                        mb: 4
+                      }}
+                    >
+                      {feature.description}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ mb: 4 }}>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 3,
+                        color: theme.palette[feature.color].main
+                      }}
+                    >
+                      Why It Works
+                    </Typography>
+                    
+                    {feature.benefits.map((benefit, benefitIndex) => (
+                      <Box key={benefitIndex} sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            backgroundColor: theme.palette[feature.color].main,
+                            mt: 1,
+                            mr: 2,
+                            flexShrink: 0
+                          }}
+                        />
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            color: theme.palette.text.primary,
+                            lineHeight: 1.6,
+                            fontSize: '1.1rem'
+                          }}
+                        >
+                          {benefit}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                  
+                  <Box>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 3,
+                        color: theme.palette[feature.color].main
+                      }}
+                    >
+                      How to Use It
+                    </Typography>
+                    
+                    {feature.howToUse.map((step, stepIndex) => (
+                      <Box key={stepIndex} sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                        <Box
+                          sx={{
+                            minWidth: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            backgroundColor: theme.palette[feature.color].main,
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 2,
+                            fontSize: '0.8rem',
+                            fontWeight: 700
+                          }}
+                        >
+                          {stepIndex + 1}
+                        </Box>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            color: theme.palette.text.primary,
+                            lineHeight: 1.6,
+                            fontSize: '1.1rem'
+                          }}
+                        >
+                          {step}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Grid>
+              </Grid>
+              
+              {/* Security callout for progress section */}
+              {feature.id === 'progress' && (
+                <Box
+                  sx={{
+                    mt: 6,
+                    p: 4,
+                    borderRadius: 4,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    color: 'white',
+                    textAlign: 'center'
+                  }}
+                >
+                  <NoEncryption sx={{ fontSize: 50, mb: 2 }} />
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 800,
+                      mb: 2
+                    }}
+                  >
+                    🔒 End-to-End Encrypted
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      opacity: 0.9,
+                      maxWidth: '600px',
+                      mx: 'auto',
+                      lineHeight: 1.6
+                    }}
+                  >
+                    Every single data point—your goals, your progress, your thoughts—is encrypted with military-grade security before it ever leaves your device. Not even we can access your personal information. Your growth journey is yours alone.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </motion.div>
+        </Container>
+      ))}
 
       {/* Focus Section */}
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>

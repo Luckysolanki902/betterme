@@ -342,7 +342,7 @@ function generateToken(length = 32) {
 // Define constants for field definitions
 const ENCRYPTED_FIELDS = {
   TODO: ['title', 'description', 'category'],
-  PLANNER: ['title', 'description', 'notes', 'content'], // Keep content here for basic APIs, but use specialized handling for deeper nested content
+  PLANNER: ['title', 'description', 'notes'], // Remove 'content' - we'll handle it specially as structured data
   JOURNAL: ['title'], // Remove 'content' and 'tags' - we'll handle them separately like we do for planner content
   USER_DATA: ['preferences', 'settings', 'personalData']
 };

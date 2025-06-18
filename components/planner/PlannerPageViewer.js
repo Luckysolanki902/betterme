@@ -130,9 +130,16 @@ const PlannerPageViewer = ({ pageId }) => {
       if (!res.ok) {
         throw new Error('Failed to save page');
       }
-      
-      const updatedPage = await res.json();
+        const updatedPage = await res.json();
       setPage(updatedPage);
+      
+      // Also update the edit data to reflect the saved changes
+      setEditData({
+        title: updatedPage.title,
+        description: updatedPage.description || '',
+        content: updatedPage.content || [],
+      });
+      
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving page:', error);

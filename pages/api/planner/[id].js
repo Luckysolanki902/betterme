@@ -27,18 +27,19 @@ const handler = async (req, res) => {
         const pageObj = page.toObject();
         let decryptedPage = decryptFields(pageObj, ENCRYPTED_FIELDS.PLANNER, userId);
         
-        // Additional handling for content blocks if they still appear encrypted
+        // Handle content blocks decryption if they have encrypted text
         if (Array.isArray(decryptedPage.content) && decryptedPage.content.length > 0) {
           decryptedPage.content = decryptedPage.content.map(block => {
-            const decryptedBlock = { ...block };
-              // Decrypt the content field in each block if it still looks encrypted
+            const decryptedBlock = { ...block };              // Decrypt the content field in each block if it still looks encrypted
             if (typeof decryptedBlock.content === 'string' && decryptedBlock.content.trim() !== '') {
               try {
-                // If the content still appears to be encrypted
-                if (decryptedBlock.content.match(/^[A-Za-z0-9+/=]+$/) && decryptedBlock.content.length > 20) {
+                // Only try to decrypt if it looks like encrypted data (base64 with colons)
+                if (decryptedBlock.content.match(/^[A-Za-z0-9+/=]+$/) && 
+                    decryptedBlock.content.length > 20 && 
+                    decryptedBlock.content.includes('=')) {
                   try {
                     const decryptResult = decryptFields({ text: decryptedBlock.content }, ['text'], userId);
-                    if (decryptResult && decryptResult.text) {
+                    if (decryptResult && decryptResult.text && decryptResult.text !== decryptedBlock.content) {
                       decryptedBlock.content = decryptResult.text;
                     }
                   } catch (err) {
@@ -126,12 +127,11 @@ const handler = async (req, res) => {
         const { title, description, content } = req.body;
         if (!title) {
           return res.status(400).json({ error: 'Title is required' });
-        }          // Encrypt all fields using the standard method
-        let updateData = encryptFields({ title, description, content }, ENCRYPTED_FIELDS.PLANNER, userId);
+        }          // Encrypt title and description only
+        let updateData = encryptFields({ title, description }, ENCRYPTED_FIELDS.PLANNER, userId);
         
-        // If content is an array, we need special handling for nested structures
+        // Handle content array separately - keep the structure and encrypt only text content within each block
         if (content && Array.isArray(content) && content.length > 0) {
-          // We'll re-process the content array to ensure proper encryption of nested elements
           updateData.content = content.map(block => {
             const encryptedBlock = { ...block };
             
@@ -185,12 +185,91 @@ const handler = async (req, res) => {
           { ...updateData, updatedAt: new Date() },
           { new: true, runValidators: true }
         );
-        
-        if (!updatedPage) {
+          if (!updatedPage) {
           return res.status(404).json({ error: 'Page not found' });
+        }        // Decrypt the updated page properly
+        const pageObj = updatedPage.toObject();
+        let decryptedPage = decryptFields(pageObj, ENCRYPTED_FIELDS.PLANNER, userId);
+        
+        // Handle content blocks decryption if they have encrypted text
+        if (Array.isArray(decryptedPage.content) && decryptedPage.content.length > 0) {
+          decryptedPage.content = decryptedPage.content.map(block => {
+            const decryptedBlock = { ...block };
+              // Decrypt the content field in each block if it still looks encrypted
+            if (typeof decryptedBlock.content === 'string' && decryptedBlock.content.trim() !== '') {
+              try {
+                // Only try to decrypt if it looks like encrypted data (base64 with colons)
+                if (decryptedBlock.content.match(/^[A-Za-z0-9+/=]+$/) && 
+                    decryptedBlock.content.length > 20 && 
+                    decryptedBlock.content.includes('=')) {
+                  try {
+                    const decryptResult = decryptFields({ text: decryptedBlock.content }, ['text'], userId);
+                    if (decryptResult && decryptResult.text && decryptResult.text !== decryptedBlock.content) {
+                      decryptedBlock.content = decryptResult.text;
+                    }
+                  } catch (err) {
+                    console.warn('Failed to decrypt updated block content, using as-is:', err);
+                  }
+                }
+              } catch (err) {
+                console.error('Error processing updated block content:', err);
+              }
+            }
+            
+            // Decrypt list items if present
+            if (Array.isArray(decryptedBlock.listItems) && decryptedBlock.listItems.length > 0) {
+              decryptedBlock.listItems = decryptedBlock.listItems.map(item => {
+                const decryptedItem = { ...item };                if (typeof decryptedItem.content === 'string' && decryptedItem.content.trim() !== '') {
+                  try {
+                    if (decryptedItem.content.match(/^[A-Za-z0-9+/=]+$/) && 
+                        decryptedItem.content.length > 20 && 
+                        decryptedItem.content.includes('=')) {
+                      try {
+                        const decryptResult = decryptFields({ text: decryptedItem.content }, ['text'], userId);
+                        if (decryptResult && decryptResult.text && decryptResult.text !== decryptedItem.content) {
+                          decryptedItem.content = decryptResult.text;
+                        }
+                      } catch (err) {
+                        console.warn('Failed to decrypt updated list item content, using as-is:', err);
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Failed to decrypt updated list item content:', err);
+                  }
+                }
+                
+                // Decrypt sub-items if present
+                if (Array.isArray(decryptedItem.subItems) && decryptedItem.subItems.length > 0) {
+                  decryptedItem.subItems = decryptedItem.subItems.map(subItem => {
+                    const decryptedSubItem = { ...subItem };                    if (typeof decryptedSubItem.content === 'string' && decryptedSubItem.content.trim() !== '') {
+                      try {
+                        if (decryptedSubItem.content.match(/^[A-Za-z0-9+/=]+$/) && 
+                            decryptedSubItem.content.length > 20 && 
+                            decryptedSubItem.content.includes('=')) {
+                          try {
+                            const decryptResult = decryptFields({ text: decryptedSubItem.content }, ['text'], userId);
+                            if (decryptResult && decryptResult.text && decryptResult.text !== decryptedSubItem.content) {
+                              decryptedSubItem.content = decryptResult.text;
+                            }
+                          } catch (err) {
+                            console.warn('Failed to decrypt updated sub-item content, using as-is:', err);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to decrypt updated sub-item content:', err);
+                      }
+                    }
+                    return decryptedSubItem;
+                  });
+                }
+                
+                return decryptedItem;
+              });
+            }
+            
+            return decryptedBlock;          });
         }
         
-        const decryptedPage = decryptFields(updatedPage.toObject(), ENCRYPTED_FIELDS.PLANNER, userId);
         res.status(200).json(decryptedPage);
       } catch (error) {
         console.error('Error updating planner page:', error);
