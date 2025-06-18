@@ -9,6 +9,7 @@ import { Inter } from 'next/font/google';
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { Analytics } from "@vercel/analytics/next"
 
 // Load Inter font
 const inter = Inter({
@@ -161,6 +162,7 @@ function App({ Component, pageProps }) {
       
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        <Analytics/>
         <main className={inter.className}>
           <StartDateProvider>
             <StreakProvider>
