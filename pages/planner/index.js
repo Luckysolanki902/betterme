@@ -27,7 +27,7 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import Layout from '@/components/Layout';
 import PlannerLayout from '@/components/planner/PlannerLayout';
-import TypeAdminPassword from '@/components/TypeAdminPassword';
+import { useUser } from '@clerk/nextjs';
 
 const PlannerIndex = () => {
   const [pages, setPages] = useState([]);
@@ -39,52 +39,22 @@ const PlannerIndex = () => {
   const [newPage, setNewPage] = useState({ title: '' });
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user, isLoaded } = useUser();
 
-  // Check authentication status on load
+  // Redirect to welcome if not authenticated
   useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        const token = localStorage.getItem('sessionId');
-        
-        if (!token) {
-          setIsAuthenticated(false);
-          setAuthChecking(false);
-          return;
-        }
-        
-        // Verify token with the server
-        const res = await fetch('/api/security/verify-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        
-        const data = await res.json();
-        setIsAuthenticated(data.success);
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setAuthChecking(false);
-      }
-    };
-    
-    checkAuthentication();
-  }, []);
-
-  useEffect(() => {
-    // Only fetch pages if authenticated
-    if (isAuthenticated) {
-      fetchPages();
-    } else if (!authChecking) {
-      setLoading(false); // Stop loading if not authenticated
+    if (isLoaded && !user) {
+      router.push('/welcome');
     }
-  }, [isAuthenticated, authChecking]);
+  }, [isLoaded, user, router]);
+  useEffect(() => {
+    if (isLoaded && user) {
+      fetchPages();
+    }
+  }, [isLoaded, user]);
 
   const fetchPages = async () => {
     try {
@@ -286,8 +256,8 @@ const PlannerIndex = () => {
       setDeleting(false);
     }
   };
-
-  if (authChecking) {
+  // Show loading while checking authentication
+  if (!isLoaded) {
     return (
       <Layout>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -297,9 +267,14 @@ const PlannerIndex = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  // Only render if user is authenticated (redirect handled by useEffect)
+  if (!user) {
     return (
-      <TypeAdminPassword onSuccess={() => setIsAuthenticated(true)} />
+      <Layout>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress />
+        </Box>
+      </Layout>
     );
   }
   return (
@@ -502,28 +477,7 @@ const PlannerIndex = () => {
                   ),
                 }}
               />
-              
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setFilteredPages(pages)}
-                sx={{ 
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
-                  '&:hover': {
-                    borderColor: theme.palette.primary.dark,
-                    color: theme.palette.primary.dark,
-                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <SortIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Sort
-              </Button>
+
             </Box>
             
             <Grid container spacing={3}>

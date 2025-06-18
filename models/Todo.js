@@ -3,6 +3,11 @@ import mongoose from 'mongoose';
 
 const TodoSchema = new mongoose.Schema(
   {
+    userId: { 
+      type: String, 
+      required: true, 
+      index: true 
+    },
     title: { type: String, required: true },
     difficulty: { 
       type: String, 
@@ -22,6 +27,11 @@ const TodoSchema = new mongoose.Schema(
   },
   { timestamps: true } // Enable automatic createdAt and updatedAt fields
 );
+
+// Create compound index for efficient user-specific queries
+TodoSchema.index({ userId: 1, category: 1 });
+TodoSchema.index({ userId: 1, completed: 1 });
+TodoSchema.index({ userId: 1, createdAt: -1 });
 
 // Ensure model recompilation prevention in development
 delete mongoose.connection.models['Todo'];

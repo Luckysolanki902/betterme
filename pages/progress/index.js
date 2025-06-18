@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import Layout from '@/components/Layout';
 import EmptyState from '@/components/EmptyState';
 import ProgressTabs from '@/components/ProgressTabs';
@@ -22,6 +23,8 @@ import ProgressTrend from '@/components/ProgressTrend';
 import { useStreak } from '@/contexts/StreakContext';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/router';
 
 const Progress = () => {
   const theme = useTheme();
@@ -35,27 +38,39 @@ const Progress = () => {
   const [hasData, setHasData] = useState(true);
   const [totalScore, setTotalScore] = useState({ improvement: 0, totalScore: 0, totalPossibleScore: 0 });
   const { currentStreak, longestStreak, dayCount } = useStreak();
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  // Redirect to welcome if not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push('/welcome');
+    }
+  }, [isLoaded, user, router]);
 
   // Map tab value to period
   const tabToPeriod = ['day', 'week', 'month'];
   const currentPeriod = tabToPeriod[tabValue];
+  
   // Fetch categories
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch('/api/todos');
-        const todos = await res.json();
-        
-        // Extract unique categories
-        const uniqueCategories = [...new Set(todos.map(todo => todo.category))];
-        setCategories(uniqueCategories);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
+    if (isLoaded && user) {
+      const fetchCategories = async () => {
+        try {
+          const res = await fetch('/api/todos');
+          const todos = await res.json();
+          
+          // Extract unique categories
+          const uniqueCategories = [...new Set(todos.map(todo => todo.category))];
+          setCategories(uniqueCategories);
+        } catch (error) {
+          console.error('Error fetching categories:', error);
+        }
+      };
+      
+      fetchCategories();
+    }
+  }, [isLoaded, user]);
 
   // Fetch total score data
   useEffect(() => {
@@ -244,14 +259,12 @@ const Progress = () => {
             }
             animationDelay={0.1}
           />
-        </Grid>
-
-        {/* Current Streak Card */}
+        </Grid>        {/* Current Streak Card */}
         <Grid item xs={12} sm={6} md={4}>
           <ProgressCard 
             title="Current Streak"
             value={currentStreak}
-            maxValue={longestStreak || currentStreak || 1}
+            maxValue={100}
             suffix="days"
             icon={
               <WhatshotIcon sx={{ 
@@ -259,6 +272,22 @@ const Progress = () => {
               }} />
             }
             animationDelay={0.2}
+          />
+        </Grid>
+        
+        {/* Longest Streak Card */}
+        <Grid item xs={12} sm={6} md={4}>
+          <ProgressCard 
+            title="Longest Streak"
+            value={longestStreak}
+            maxValue={100}
+            suffix="days"
+            icon={
+              <EmojiEventsIcon sx={{ 
+                color: theme.palette.success.main 
+              }} />
+            }
+            animationDelay={0.3}
           />
         </Grid>
 

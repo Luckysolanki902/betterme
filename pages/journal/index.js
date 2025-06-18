@@ -35,11 +35,23 @@ import JournalEditor from '@/components/journal/JournalEditor';
 import JournalQuote from '@/components/journal/JournalQuote';
 import JournalStats from '@/components/journal/JournalStats';
 import styles from '@/components/journal/JournalStyles.module.css';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/router';
 
 const JournalPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    // State
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  
+  // Redirect to welcome if not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push('/welcome');
+    }
+  }, [isLoaded, user, router]);
+  
+  // State
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [entriesByDate, setEntriesByDate] = useState({});
@@ -48,6 +60,13 @@ const JournalPage = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
+
+  // Redirect to welcome if not authenticated
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push('/welcome');
+    }
+  }, [isLoaded, user, router]);
   const [suggestionsDialogOpen, setSuggestionsDialogOpen] = useState(false);  const [error, setError] = useState(null);
   const [moodDetected, setMoodDetected] = useState(false);
   const [stats, setStats] = useState({
@@ -175,17 +194,20 @@ const JournalPage = () => {
         setStatsLoading(false);
       });
   };
-  
-  // Initialize data
+    // Initialize data when user is authenticated
   useEffect(() => {
-    fetchMonthEntries(currentMonth);
-    fetchStats();
-  }, []);
+    if (isLoaded && user) {
+      fetchMonthEntries(currentMonth);
+      fetchStats();
+    }
+  }, [isLoaded, user]);
   
   // Update entries when month changes
   useEffect(() => {
-    fetchMonthEntries(currentMonth);
-  }, [currentMonth]);
+    if (isLoaded && user) {
+      fetchMonthEntries(currentMonth);
+    }
+  }, [currentMonth, isLoaded, user]);
   // Handle date selection
   const handleDateSelect = (date) => {
     const selectedDayjs = dayjs(date);
@@ -297,9 +319,15 @@ const JournalPage = () => {
       }
     });
   };
-  
-  // Helper function to save entry to API
+    // Helper function to save entry to API
   const saveEntryToAPI = (entryData, isNewEntry, existingEntry, resolve, reject) => {
+    // Check if we have a valid existingEntry with an _id when updating
+    if (!isNewEntry && (!existingEntry || !existingEntry._id)) {
+      console.error('Cannot update journal entry: Missing entry ID', { existingEntry });
+      reject(new Error('Cannot update journal entry: Missing entry ID'));
+      return;
+    }
+
     // API endpoint and method
     const url = isNewEntry 
       ? '/api/journal' 
@@ -415,18 +443,91 @@ const JournalPage = () => {
   return (
     <Layout>
       <Container maxWidth="lg" className={styles.journalContainer}>
-        <Box className={styles.pageHeader}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            My Journal
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Reflect, remember, and grow with daily journaling
-          </Typography>
-        </Box>
           {/* Motivational Quote */}
         <JournalQuote />
         
-        {/* Today's Entry Action Button */}
+
+        
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {/* Main Content Section */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          gap: 3,
+          mb: 4
+        }}>          {/* Calendar Section */}
+          <Box sx={{ 
+            flex: '0 0 auto', 
+            width: { xs: '100%', md: '350px' },
+            position: 'sticky',
+            top: '80px',
+            height: 'fit-content'
+          }}>
+            <JournalCalendar 
+              entriesData={entriesByDate}
+              onDateSelect={handleDateSelect}
+              selectedDate={selectedDate}
+              onMonthChange={handleMonthChange}
+              loading={loading}
+              shouldDisableDate={isDateDisabled}
+            />
+          </Box>
+          {/* Stats Section */}
+          <Box sx={{ flex: 1 }}>
+            <Paper 
+              elevation={3}
+              sx={{ 
+                borderRadius: 2,
+                p: 3,
+                mb: 3,
+                background: 'linear-gradient(135deg, #f5f7fa 0%, #f8f9fa 100%)'
+              }}
+            >
+              <Typography 
+                variant="h5" 
+                component="h2" 
+                sx={{ mb: 3, fontWeight: 600, textAlign: 'center' }}
+              >
+                Journal Insights
+              </Typography>
+              
+              {statsLoading ? (
+                <Box sx={{ py: 3 }}>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      p: 3, 
+                      textAlign: 'center', 
+                      borderRadius: 2,
+                      backgroundColor: alpha(theme.palette.background.paper, 0.5),
+                      backdropFilter: 'blur(8px)',
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                      <CircularProgress size={30} sx={{ opacity: 0.7 }} />
+                    </Box>
+                    <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 500 }}>
+                      Preparing your journal insights...
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1, opacity: 0.7 }}>
+                      We're analyzing your writing patterns and journaling habits
+                    </Typography>
+                  </Paper>
+                </Box>
+              ) : (
+                <JournalStats stats={stats} />
+              )}
+            </Paper>
+          </Box>
+        </Box>
+                {/* Today's Entry Action Button */}
         <Box sx={{ mb: 3 }}>
           <Paper
             elevation={2}
@@ -524,100 +625,6 @@ const JournalPage = () => {
             </Box>
           </Paper>
         </Box>
-        
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {/* Main Content Section */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', md: 'row' }, 
-          gap: 3,
-          mb: 4
-        }}>
-          {/* Calendar Section */}
-          <Box sx={{ 
-            flex: '0 0 auto', 
-            width: { xs: '100%', md: '350px' }
-          }}>
-            <Paper
-              elevation={3} 
-              sx={{ 
-                borderRadius: 2,
-                overflow: 'hidden',
-                position: 'sticky',
-                top: '80px'
-              }}
-            >
-              <Box sx={{ p: 2, bgcolor: theme.palette.primary.main, color: 'white' }}>
-                <Typography variant="h6" align="center">
-                  Journal Calendar
-                </Typography>
-              </Box>
-              <JournalCalendar 
-                entriesData={entriesByDate}
-                onDateSelect={handleDateSelect}
-                selectedDate={selectedDate}
-                onMonthChange={handleMonthChange}
-                loading={loading}
-                shouldDisableDate={isDateDisabled}
-              />
-            </Paper>
-          </Box>          
-          {/* Stats Section */}
-          <Box sx={{ flex: 1 }}>
-            <Paper 
-              elevation={3}
-              sx={{ 
-                borderRadius: 2,
-                p: 3,
-                mb: 3,
-                background: 'linear-gradient(135deg, #f5f7fa 0%, #f8f9fa 100%)'
-              }}
-            >
-              <Typography 
-                variant="h5" 
-                component="h2" 
-                sx={{ mb: 3, fontWeight: 600, textAlign: 'center' }}
-              >
-                Journal Insights
-              </Typography>
-              
-              {statsLoading ? (
-                <Box sx={{ py: 3 }}>
-                  <Paper 
-                    elevation={0}
-                    sx={{ 
-                      p: 3, 
-                      textAlign: 'center', 
-                      borderRadius: 2,
-                      backgroundColor: alpha(theme.palette.background.paper, 0.5),
-                      backdropFilter: 'blur(8px)',
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                      <CircularProgress size={30} sx={{ opacity: 0.7 }} />
-                    </Box>
-                    <Typography variant="body1" color="textSecondary" sx={{ fontWeight: 500 }}>
-                      Preparing your journal insights...
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" sx={{ mt: 1, opacity: 0.7 }}>
-                      We're analyzing your writing patterns and journaling habits
-                    </Typography>
-                  </Paper>
-                </Box>
-              ) : (
-                <JournalStats stats={stats} />
-              )}
-            </Paper>
-          </Box>
-        </Box>
-        
         {/* Journal Entry Editor Dialog */}
         <Dialog
           open={editorOpen}
@@ -682,36 +689,81 @@ const JournalPage = () => {
           </Fab>
         </Tooltip>
       )}
-      
-      {/* Empty state for first-time users */}
-      {stats.totalEntries === 0 && !loading && !editorOpen && (
-        <Paper
+        {/* Empty state for first-time users - only shown when there are no entries ever */}
+      {stats.totalEntries === 0 && Object.keys(entriesByDate).length === 0 && !loading && !editorOpen && (        <Paper
           elevation={3}
           sx={{ 
             textAlign: 'center', 
             py: 6, 
-            px: 3,
-            bgcolor: alpha(theme.palette.background.paper, 0.9),
-            borderRadius: 2,
+            px: 4,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+            borderRadius: 4,
             mt: 4,
-            mb: 4
+            mb: 4,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '5px',
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            },
+            boxShadow: `0 12px 36px ${alpha(theme.palette.primary.dark, 0.15)}`
           }}
         >
-          <Typography variant="h5" gutterBottom>
+          <Typography 
+            variant="h4" 
+            gutterBottom
+            sx={{
+              fontWeight: 700,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 2
+            }}
+          >
             Start Your Journaling Journey
           </Typography>
           
-          <Typography variant="body1" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              mb: 4, 
+              maxWidth: 700, 
+              mx: 'auto',
+              fontSize: '1.1rem',
+              color: alpha(theme.palette.text.primary, 0.9)
+            }}
+          >
             Regular journaling can improve mental clarity, emotional well-being, and help you track your personal growth over time.
           </Typography>
-          
-          <Button
+            <Button
             variant="contained"
             color="primary"
             size="large"
             startIcon={<EditIcon />}
             onClick={handleCreateTodaysEntry}
-            sx={{ mr: 2, mb: { xs: 2, sm: 0 } }}
+            sx={{ 
+              mr: 2, 
+              mb: { xs: 2, sm: 0 },
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              boxShadow: `0 4px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-3px)',
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.6)}`,
+              }
+            }}
           >
             Write Today's Entry
           </Button>
@@ -719,6 +771,22 @@ const JournalPage = () => {
             variant="outlined"
             startIcon={<LightbulbOutlinedIcon />}
             onClick={handleOpenSuggestions}
+            sx={{
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderWidth: '2px',
+              borderColor: alpha(theme.palette.secondary.main, 0.5),
+              color: theme.palette.secondary.main,
+              '&:hover': {
+                borderWidth: '2px',
+                borderColor: theme.palette.secondary.main,
+                backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+              }
+            }}
           >
             Need Inspiration?
           </Button>

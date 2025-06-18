@@ -2,18 +2,24 @@ import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
 import Config from '@/models/Config';
 import { format } from 'date-fns';
+import { getUserId } from '@/middleware/clerkAuth';
 
-const handler = async (req, res) => {
-  if (req.method === 'GET') {
+const handler = async (req, res) => {  if (req.method === 'GET') {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
       // Get config to find the start date
-      const config = await Config.findOne();
+      const config = await Config.findOne({ userId });
       const start = config?.startDate || new Date('2024-09-27T00:00:00Z');
       
       // Set the end date to today
       const end = new Date();
 
       const dailyCompletions = await DailyCompletion.find({
+        userId,
         date: { $gte: start, $lte: end },
       }).sort({ date: 1 });
 

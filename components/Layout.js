@@ -27,9 +27,11 @@ import TimelineRoundedIcon from '@mui/icons-material/TimelineRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import BookRoundedIcon from '@mui/icons-material/BookRounded';
+import BugReportIcon from '@mui/icons-material/BugReport';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
+import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
 const drawerWidth = 270;
 
@@ -97,10 +99,12 @@ const NavItemDrawer = styled(ListItemButton, {
 }));
 
 // Navigation items
-const navItems = [  { text: 'Home', icon: <HomeRoundedIcon />, path: '/' },
+const navItems = [
+  { text: 'Home', icon: <HomeRoundedIcon />, path: '/' },
   { text: 'Planner', icon: <EditRoundedIcon />, path: '/planner' },
   { text: 'Journal', icon: <BookRoundedIcon />, path: '/journal' },
   { text: 'Progress', icon: <TimelineRoundedIcon />, path: '/progress' },
+  { text: 'Bug Report', icon: <BugReportIcon />, path: '/bug-report', public: true },
   { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/settings' }
 ];
 
@@ -110,6 +114,8 @@ export default function Layout({ children }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [activeTab, setActiveTab] = useState('/');
+  const { isSignedIn } = useUser();
+
   useEffect(() => {
     // Set active tab based on current route
     setActiveTab(router.pathname);
@@ -144,7 +150,7 @@ export default function Layout({ children }) {
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }} onClick={() => navigateTo('/')}>
           <Avatar 
             sx={{ 
               background: 'linear-gradient(135deg, #4263EB 0%, #9370DB 100%)', 
@@ -154,7 +160,7 @@ export default function Layout({ children }) {
               fontWeight: 'bold'
             }}
           >
-            B
+            A
           </Avatar>
           <Typography 
             variant="h6" 
@@ -178,9 +184,8 @@ export default function Layout({ children }) {
       </Box>
       
       <Divider sx={{ opacity: 0.6, mx: 2 }} />
-      
-      <List sx={{ p: 2, flexGrow: 1, mt: 1 }}>
-        {navItems.map((item, index) => (
+        <List sx={{ p: 2, flexGrow: 1, mt: 1 }}>
+        {navItems.filter(item => isSignedIn || item.public).map((item, index) => (
           <ListItem 
             key={item.text} 
             disablePadding 
@@ -210,6 +215,47 @@ export default function Layout({ children }) {
             </NavItemDrawer>
           </ListItem>
         ))}
+        
+        <SignedOut>
+          <Box sx={{ mt: 2, px: 1 }}>
+            <SignInButton mode="modal" forceRedirectUrl="/">
+              <Button
+                fullWidth
+                variant="outlined"
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  mb: 1,
+                  borderWidth: 2,
+                  '&:hover': { borderWidth: 2 }
+                }}
+              >
+                Sign In
+              </Button>
+            </SignInButton>
+            <SignUpButton mode="modal" forceRedirectUrl="/">
+              <Button
+                fullWidth
+                variant="contained"
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                }}
+              >
+                Sign Up
+              </Button>
+            </SignUpButton>
+          </Box>
+        </SignedOut>
+        
+        <SignedIn>
+          <Box sx={{ mt: 2, px: 1, display: 'flex', justifyContent: 'center' }}>
+            <UserButton />
+          </Box>
+        </SignedIn>
       </List>
       
       <Box sx={{ p: 3, opacity: 0.6 }}>
@@ -267,37 +313,86 @@ export default function Layout({ children }) {
               )}
               Another Me
             </Logo>
-          </Box>
-
-          {!isMobile && (
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                background: alpha(theme.palette.background.paper, 0.5),
-                backdropFilter: 'blur(8px)',
-                borderRadius: '16px',
-                padding: '4px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)'
-              }}
-              component={motion.div}
-              initial={{ y: -10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-            >
-              {navItems.map((item, index) => (
-                  <NavItem
-                    component={motion.button}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 * index + 0.3, duration: 0.3 }}
-                    active={router.pathname === item.path}
-                    onClick={() => navigateTo(item.path)}
-                    startIcon={item.icon}
-                  >
-                    {item.text}
-                  </NavItem>
-              ))}
+          </Box>          {!isMobile && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  background: alpha(theme.palette.background.paper, 0.5),
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: '16px',
+                  padding: '4px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)'
+                }}
+                component={motion.div}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+              >
+                {navItems.filter(item => isSignedIn || item.public).map((item, index) => (
+                    <NavItem
+                      key={item.path}
+                      component={motion.button}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1 * index + 0.3, duration: 0.3 }}
+                      active={router.pathname === item.path}
+                      onClick={() => navigateTo(item.path)}
+                      startIcon={item.icon}
+                    >
+                      {item.text}
+                    </NavItem>
+                ))}
+              </Box>
+              
+              <SignedOut>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SignInButton mode="modal" forceRedirectUrl="/">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderWidth: 2,
+                        '&:hover': { borderWidth: 2 }
+                      }}
+                    >
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal" forceRedirectUrl="/">
+                    <Button
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        '&:hover': {
+                          transform: 'translateY(-1px)',
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      Sign Up
+                    </Button>
+                  </SignUpButton>
+                </Box>
+              </SignedOut>
+              
+              <SignedIn>
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-8 h-8"
+                    }
+                  }}
+                />
+              </SignedIn>
             </Box>
           )}
         </Toolbar>

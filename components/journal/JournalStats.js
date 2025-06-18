@@ -29,20 +29,83 @@ ChartJS.register(
 // Stats card for journal metrics
 const StatCard = ({ value, label, color }) => {
   const theme = useTheme();
-
   return (
     <Paper
-      elevation={0}
+      elevation={3}
       className={styles.statCard}
       sx={{
-        backgroundColor: alpha(color, 0.05),
-        borderLeft: `4px solid ${color}`,
+        backgroundColor: '#ffffff',
+        borderRadius: '16px',
+        padding: '25px',
+        width: '100%', 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        boxShadow: `0 8px 30px ${alpha(color, 0.18)}`,
+        border: `1px solid ${alpha(color, 0.25)}`,
+        position: 'relative',
+        overflow: 'hidden',
+        '&:hover': {
+          transform: 'translateY(-7px) scale(1.03)',
+          boxShadow: `0 12px 40px ${alpha(color, 0.35)}`,
+          border: `1px solid ${alpha(color, 0.5)}`,
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '5px',
+          background: `linear-gradient(90deg, ${color}, ${alpha(color, 0.7)})`,
+          borderRadius: '5px 5px 0 0',
+        },
+        animation: 'fadeInUp 0.6s ease-out',
+        '@keyframes fadeInUp': {
+          '0%': { opacity: 0, transform: 'translateY(20px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' }
+        }
       }}
     >
-      <Typography variant="body2" className={styles.statLabel}>
+      <Box 
+        sx={{
+          position: 'absolute',
+          top: -20,
+          right: -20,
+          width: '120px',
+          height: '120px',
+          borderRadius: '50%',
+          background: alpha(color, 0.08),
+          zIndex: 0
+        }}
+      />
+      <Typography 
+        variant="body2" 
+        className={styles.statLabel}
+        sx={{
+          fontWeight: 500,
+          color: theme.palette.text.secondary,
+          mb: 1,
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
         {label}
       </Typography>
-      <Typography variant="h4" className={styles.statValue} sx={{ color }}>
+      <Typography 
+        variant="h4" 
+        className={styles.statValue} 
+        sx={{ 
+          color,
+          fontWeight: 700,
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
         <CountUp end={value} duration={2} />
       </Typography>
     </Paper>
@@ -140,9 +203,21 @@ const JournalStats = ({ stats }) => {
       },
     },
     cutout: '60%',
-  };
-  return (
-    <Box className={styles.statsContainer}>
+  };  return (    <Box 
+      className={styles.statsContainer}
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: 3,
+        height: '100%',
+        padding: 2,
+        animation: 'fadeIn 0.8s ease-out',
+        '@keyframes fadeIn': {
+          '0%': { opacity: 0, transform: 'translateY(20px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' }
+        }
+      }}
+    >
       <StatCard
         value={totalEntries}
         label="Total Entries"
@@ -159,19 +234,27 @@ const JournalStats = ({ stats }) => {
         value={longestStreak}
         label="Longest Streak (Days)"
         color={theme.palette.success.main}
-      />
-
-      {/* Beautiful Mood Chart */}
+      />      {/* Beautiful Mood Chart */}
       {totalEntries > 0 && Object.keys(moodCounts).length > 0 && (
         <Paper
-          elevation={0}
+          elevation={4}
           sx={{
             gridColumn: '1 / -1',
-            p: 3,
-            borderRadius: 3,
-            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.02)})`,
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-            boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.1)}`,
+            p: 4,
+            borderRadius: 4,
+            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.04)})`,
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+            boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
+            transition: 'all 0.5s ease',
+            '&:hover': {
+              boxShadow: `0 16px 50px ${alpha(theme.palette.primary.main, 0.25)}`,
+              transform: 'translateY(-5px)',
+            },
+            animation: 'fadeInUp 0.8s ease-out',
+            '@keyframes fadeInUp': {
+              '0%': { opacity: 0, transform: 'translateY(30px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' }
+            }
           }}
         >
           <Typography 

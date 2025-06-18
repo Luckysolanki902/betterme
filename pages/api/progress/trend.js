@@ -2,6 +2,7 @@
 import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
 import Todo from '@/models/Todo';
+import { getUserId } from '@/middleware/clerkAuth';
 import { 
   startOfDay, 
   endOfDay, 
@@ -22,6 +23,11 @@ const handler = async (req, res) => {
   }
 
   try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
     // Get query parameters
     const { period = 'day', category = 'all' } = req.query;
     const today = new Date();
@@ -51,10 +57,8 @@ const handler = async (req, res) => {
     }
 
     // Generate all intervals in the period
-    const intervals = intervalFunction({ start: startDate, end: endDate });
-
-    // Find all todos (optionally filtered by category)
-    let todoQuery = {};
+    const intervals = intervalFunction({ start: startDate, end: endDate });    // Find all todos (optionally filtered by category)
+    let todoQuery = { userId };
     if (category !== 'all') {
       todoQuery.category = category;
     }
@@ -87,6 +91,7 @@ const handler = async (req, res) => {
 
     // Get all daily completions for the period
     const dailyCompletions = await DailyCompletion.find({
+      userId,
       date: { $gte: startDate, $lte: endDate }
     }).populate('completedTodos');
 

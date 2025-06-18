@@ -41,16 +41,14 @@ const PlannerPageViewer = ({ pageId }) => {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
   // Fetch page data
   useEffect(() => {
     if (!pageId) return;
     
     const fetchPage = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
+      setLoading(true);
+      setError(null);
+        try {
         const res = await fetch(`/api/planner/${pageId}`);
         
         if (!res.ok) {
@@ -68,10 +66,13 @@ const PlannerPageViewer = ({ pageId }) => {
         });
         
         // Build breadcrumbs
-        await buildBreadcrumbs(data.parentId);
-      } catch (error) {
+        await buildBreadcrumbs(data.parentId);      } catch (error) {
         console.error('Error fetching page:', error);
         setError('Failed to load page');
+        // Redirect back to planner home after 2 seconds on error
+        setTimeout(() => {
+          router.push('/planner');
+        }, 2000);
       } finally {
         setLoading(false);
       }

@@ -1,7 +1,7 @@
 // pages/api/journal/stats.js
 import connectToMongo from '@/middleware/connectToMongo';
 import JournalEntry from '@/models/JournalEntry';
-const { getUserId, decryptJournalEntries } = require('@/middleware/journalEncryption');
+import { getUserId } from '@/middleware/clerkAuth';
 import dayjs from 'dayjs';
 
 // API handler for /api/journal/stats
@@ -10,37 +10,30 @@ const handler = async (req, res) => {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-  try {    // Get the user ID for filtering
+  }  try {
+    // Get the user ID for filtering
     const userId = getUserId(req);
     
-    // Get total entries count
-    const totalEntries = await JournalEntry.countDocuments({ userId });
-    
-    // Get all entries sorted by date
+    // Get all entries sorted by date (no need to decrypt for stats as we're using stored metadata)
     const entries = await JournalEntry.find({ userId })
       .sort({ entryDate: -1 })
-      .select('entryDate mood wordCount content title')
+      .select('entryDate mood wordCount')
       .lean();
     
-    // Decrypt the entries first to ensure accurate stats
-    const decryptedEntries = decryptJournalEntries(entries, userId);
+    // Get total entries count
+    const totalEntries = entries.length;
     
-    // Calculate total words from decrypted content
+      // Initialize counters
     let totalWords = 0;
     
     // Calculate most common mood
     const moodCounts = {};
     let maxMoodCount = 0;
     let mostCommonMood = { label: 'neutral', score: 5 };
-    
-    // Process decrypted entry data
-    decryptedEntries.forEach(entry => {
-      // Calculate actual word count from decrypted content
-      const content = entry.content || '';
-      const title = entry.title || '';
-      const actualWordCount = (content + ' ' + title).trim().split(/\s+/).filter(word => word.length > 0).length;
-      totalWords += actualWordCount;
+      // Process entry data (using stored wordCount for performance)
+    entries.forEach(entry => {
+      // Sum up the total words from wordCount
+      totalWords += entry.wordCount || 0;
       
       // Count moods
       const moodLabel = entry.mood?.label || 'neutral';
@@ -67,12 +60,13 @@ const handler = async (req, res) => {
     const avgWordsPerEntry = totalEntries > 0 
       ? Math.round(totalWords / totalEntries) 
       : 0;
-    
-    // Calculate current streak
+      // Calculate current streak
     let currentStreak = 0;
-    let streakActive = false;      // Convert entries to dates only, ensuring unique dates and sorted descending
+    let streakActive = false;      
+    
+    // Convert entries to dates only, ensuring unique dates and sorted descending
     const entryDates = Array.from(new Set(
-      decryptedEntries.map(entry => dayjs(entry.entryDate).startOf('day').toISOString())
+      entries.map(entry => dayjs(entry.entryDate).startOf('day').toISOString())
     )).map(dateStr => dayjs(dateStr)).sort((a, b) => b.diff(a));
     
     // Check for today's entry

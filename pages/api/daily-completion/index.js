@@ -6,16 +6,21 @@ import Config from '@/models/Config';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { getAdjustedDateString } from '@/utils/streakUtils';
 import mongoose from 'mongoose';
-import { decryptArray, ENCRYPTED_FIELDS } from '@/utils/encryption';
-import { getUserId } from '@/middleware/encryption';
+import { getUserId } from '@/middleware/clerkAuth';
+import { decryptFields } from '@/utils/encryption';
 
-const handler = async (req, res) => {  if (req.method === 'GET') {    try {
+const handler = async (req, res) => {  if (req.method === 'GET') {
+    try {
       const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
       const { date } = req.query;
       // Use adjusted date logic if no date provided
       const selectedDate = date || getAdjustedDateString();
-      
-      const dailyCompletion = await DailyCompletion.findOne({ 
+        const dailyCompletion = await DailyCompletion.findOne({ 
+        userId,
         date: { 
           $gte: startOfDay(new Date(selectedDate)), 
           $lte: endOfDay(new Date(selectedDate)) 
@@ -29,10 +34,20 @@ const handler = async (req, res) => {  if (req.method === 'GET') {    try {
           totalPossibleScore: 0
         });
       }
+
+      // Decrypt populated todos if they exist
+      let decryptedTodos = [];
+      if (dailyCompletion.completedTodos && dailyCompletion.completedTodos.length > 0) {
+        decryptedTodos = dailyCompletion.completedTodos.map(todo => {
+          if (todo.toObject) {
+            const todoObj = todo.toObject();
+            return decryptFields(todoObj, ['task', 'category'], userId);
+          }
+          return todo;
+        });
+      }
       
-      // Decrypt the completed todos
-      const decryptedTodos = decryptArray(dailyCompletion.completedTodos, ENCRYPTED_FIELDS.TODO, userId);
-        return res.status(200).json({
+      return res.status(200).json({
         completedTodos: decryptedTodos,
         score: dailyCompletion.score,
         totalPossibleScore: dailyCompletion.totalPossibleScore
@@ -42,6 +57,11 @@ const handler = async (req, res) => {  if (req.method === 'GET') {    try {
       return res.status(500).json({ error: 'Internal server error' });
     }  } else if (req.method === 'POST') {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      
       const { category, todoId } = req.body;
       
       if (!todoId && !category) {
@@ -55,8 +75,8 @@ const handler = async (req, res) => {  if (req.method === 'GET') {    try {
       
       // Find the todo
       const todo = todoId ? 
-        await Todo.findById(todoId) : 
-        await Todo.findOne({ category });
+        await Todo.findOne({ _id: todoId, userId }) : 
+        await Todo.findOne({ category, userId });
         
       if (!todo) {
         return res.status(404).json({ error: 'Todo not found', success: false });
@@ -68,27 +88,34 @@ const handler = async (req, res) => {  if (req.method === 'GET') {    try {
       
       // Find or create today's completion record
       let dailyCompletion = await DailyCompletion.findOne({
+        userId,
         date: { $gte: todayStart, $lte: todayEnd }
       });
-      
-      if (!dailyCompletion) {
+        if (!dailyCompletion) {
         // Calculate total possible score for today from all todos
-        const allTodos = await Todo.find({});
-        const totalPossible = allTodos.reduce((sum, t) => sum + t.score, 0);
+        const allTodos = await Todo.find({ userId });
+        // Decrypt todos to get actual scores
+        const decryptedTodos = allTodos.map(todo => {
+          const todoObj = todo.toObject();
+          return decryptFields(todoObj, ['task', 'category'], userId);
+        });
+        const totalPossible = decryptedTodos.reduce((sum, t) => sum + t.score, 0);
         
         dailyCompletion = new DailyCompletion({
+          userId,
           date: today,
           completedTodos: [],
           score: 0,
           totalPossibleScore: totalPossible
         });
       }
-        // Add todo to completedTodos if not already there
-      // Need to convert ObjectIds to strings for proper comparison
+      
+      // Add todo to completedTodos if not already there
       const todoIdStr = todo._id.toString();
       const todoExists = dailyCompletion.completedTodos.some(id => id.toString() === todoIdStr);
       
-      if (!todoExists) {        dailyCompletion.completedTodos.push(todo._id);
+      if (!todoExists) {
+        dailyCompletion.completedTodos.push(todo._id);
         dailyCompletion.score += todo.score;
         
         // Update todo completion status

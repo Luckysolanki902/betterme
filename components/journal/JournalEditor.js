@@ -1431,7 +1431,7 @@ const JournalEditor = ({
             }}>              <Button 
                 variant="outlined" 
                 size="small" 
-                onClick={getNextSuggestion}
+                onClick={fetchAutoSuggestion}
                 sx={{
                   borderRadius: '25px',
                   textTransform: 'none',

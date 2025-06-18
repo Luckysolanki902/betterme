@@ -1,6 +1,6 @@
 // components/journal/JournalQuote.js
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, alpha } from '@mui/material';
 import styles from './JournalStyles.module.css';
 
 // Collection of motivational quotes about journaling
@@ -67,11 +67,78 @@ const JournalQuote = () => {
   }, []);
   
   return (
-    <Box className={styles.quoteContainer}>
-      <Typography variant="body1" className={styles.quote}>
+    <Box 
+      className={styles.quoteContainer}
+      sx={{
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.15)} 100%)`,
+        backgroundSize: '200% 200%',
+        animation: 'gradientBg 15s ease infinite',
+        borderRadius: '16px',
+        padding: '28px 32px',
+        position: 'relative',
+        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.08)}`,
+        border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+        marginBottom: '40px',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: `0 12px 48px ${alpha(theme.palette.primary.main, 0.12)}`,
+        },
+        overflow: 'hidden',
+        '@keyframes gradientBg': {
+          '0%': {
+            backgroundPosition: '0% 50%'
+          },
+          '50%': {
+            backgroundPosition: '100% 50%'
+          },
+          '100%': {
+            backgroundPosition: '0% 50%'
+          },
+        }
+      }}
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          left: '20px',
+          top: '10px',
+          fontSize: '100px',
+          lineHeight: 1,
+          opacity: 0.08,
+          color: theme.palette.primary.main,
+          fontFamily: '"Georgia", serif'
+        }}
+      >
+        "
+      </Box>
+      <Typography 
+        variant="body1" 
+        className={styles.quote}
+        sx={{
+          fontSize: '1.25rem',
+          fontWeight: 400,
+          fontStyle: 'italic',
+          color: theme.palette.text.primary,
+          letterSpacing: '0.01em',
+          lineHeight: 1.6,
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
         {quote.quote}
       </Typography>
-      <Typography variant="body2" className={styles.quoteAuthor}>
+      <Typography 
+        variant="body2" 
+        className={styles.quoteAuthor}
+        sx={{
+          fontWeight: 600,
+          marginTop: '16px',
+          textAlign: 'right',
+          color: theme.palette.text.secondary,
+          fontSize: '0.95rem'
+        }}
+      >
         — {quote.author}
       </Typography>
     </Box>
@@ -79,3 +146,4 @@ const JournalQuote = () => {
 };
 
 export default JournalQuote;
+

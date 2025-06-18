@@ -61,6 +61,27 @@ function encryptData(data, userId = '') {
 
 
 /**
+ * Helper function to sanitize data for logging
+ * @param {any} data - Data to sanitize
+ * @returns {string} - Sanitized string representation
+ */
+function sanitizeForLogging(data) {
+  if (data === null || data === undefined) {
+    return String(data);
+  }
+  
+  if (typeof data !== 'string') {
+    return '[Complex Object]';
+  }
+  
+  if (data.length > 30) {
+    return data.substring(0, 30) + '...';
+  }
+  
+  return data;
+}
+
+/**
  * Decrypts data encrypted with encryptData
  * @param {string} encryptedData - Base64 encrypted data
  * @param {string} userId - User ID for key derivation (optional)
@@ -70,7 +91,10 @@ function decryptData(encryptedData, userId = '') {
   try {
     // Handle null, undefined, or non-string values
     if (!encryptedData || typeof encryptedData !== 'string') {
-      console.warn('Attempted to decrypt invalid data:', encryptedData);
+      // Don't log this for arrays or objects as it can flood the console
+      if (typeof encryptedData !== 'object') {
+        console.warn('Attempted to decrypt invalid data:', sanitizeForLogging(encryptedData));
+      }
       return typeof encryptedData === 'string' ? encryptedData : '';
     }
     
@@ -318,7 +342,8 @@ function generateToken(length = 32) {
 // Define constants for field definitions
 const ENCRYPTED_FIELDS = {
   TODO: ['title', 'description', 'category'],
-  PLANNER: ['title', 'description', 'content', 'notes'],
+  PLANNER: ['title', 'description', 'notes', 'content'], // Keep content here for basic APIs, but use specialized handling for deeper nested content
+  JOURNAL: ['title'], // Remove 'content' and 'tags' - we'll handle them separately like we do for planner content
   USER_DATA: ['preferences', 'settings', 'personalData']
 };
 

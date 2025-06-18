@@ -28,13 +28,20 @@ const ContentBlockSchema = new mongoose.Schema({
 
 // Define the planner page schema
 const PlannerPageSchema = new mongoose.Schema(
-  {    title: { type: String, required: true },
+  {
+    userId: { 
+      type: String, 
+      required: true, 
+      index: true 
+    },
+    title: { type: String, required: true },
     description: { type: String, default: '' },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'PlannerPage',
       default: null,
-    },    isEmbedded: { type: Boolean, default: false }, // For pages embedded within other pages
+    },
+    isEmbedded: { type: Boolean, default: false }, // For pages embedded within other pages
     snippet: { type: String, default: '' }, // Short preview of content for listings
     content: [ContentBlockSchema],
     // Keep track of child pages for quick access
@@ -48,8 +55,9 @@ const PlannerPageSchema = new mongoose.Schema(
 );
 
 // Add indexes
-PlannerPageSchema.index({ title: 'text', description: 'text' });
-PlannerPageSchema.index({ parentId: 1 });
+PlannerPageSchema.index({ userId: 1, title: 'text', description: 'text' });
+PlannerPageSchema.index({ userId: 1, parentId: 1 });
+PlannerPageSchema.index({ userId: 1, createdAt: -1 });
 
 // Ensure model recompilation prevention in development
 delete mongoose.connection.models['PlannerPage'];

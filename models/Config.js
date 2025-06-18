@@ -2,6 +2,12 @@
 import mongoose from 'mongoose';
 
 const ConfigSchema = new mongoose.Schema({
+  userId: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    index: true 
+  },
   totalScore: { type: Number, default: 0 },
   totalPossibleScore: { type: Number, default: 0 },
   startDate: { type: Date, default: null },

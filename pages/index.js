@@ -1,15 +1,15 @@
 // pages/index.js
 import { useState, useEffect } from 'react';
-import { 
-  Typography, 
-  Box, 
-  Paper, 
+import {
+  Typography,
+  Box,
+  Paper,
   useTheme,
   alpha,
   Container,
   Button,
   Chip,
-  Dialog,  DialogTitle,
+  Dialog, DialogTitle,
   DialogContent,
   Fade,
   Slide,
@@ -34,6 +34,7 @@ import StarIcon from '@mui/icons-material/Star';
 import LockIcon from '@mui/icons-material/Lock';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import CloseIcon from '@mui/icons-material/Close';
+import { useUser } from '@clerk/nextjs';
 import Quote from '../components/Quote';
 import Todos from '../components/Todos';
 import TodosLoading from '../components/TodosLoading';
@@ -41,6 +42,8 @@ import Layout from '@/components/Layout';
 import { useStartDate } from '@/contexts/StartDateContext';
 import { useStreak } from '@/contexts/StreakContext';
 import EmptyState from '@/components/EmptyState';
+import LoadingState from '@/components/LoadingState';
+import ErrorState from '@/components/ErrorState';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import ModifyTodosNew from '@/components/ModifyTodosNew';
@@ -53,10 +56,12 @@ const quotes = [
   "Small daily improvements over time lead to stunning results.",
   "The only bad workout is the one that didn't happen.",
   "The journey of a thousand miles begins with one step.",
-  "Don't count the days, make the days count."
+  "Don't count the days, make the days count.",
+  
 ];
 
 const Home = () => {
+  const { isSignedIn, user, isLoaded } = useUser();
   const [todos, setTodos] = useState([]);
   const [completedTodos, setCompletedTodos] = useState([]);
   const [scoreData, setScoreData] = useState({
@@ -65,71 +70,63 @@ const Home = () => {
     improvement: 0,
     todayScore: 0,
     todayPossibleScore: 0
-  });  const [isLoading, setIsLoading] = useState(true);
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
-  const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);
-  const [quote, setQuote] = useState('');
+  const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);  const [quote, setQuote] = useState('');
   const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true); // Default to true since we have Clerk auth
   const startDate = useStartDate();
-  const { dayCount, updateStreak } = useStreak();
-  const router = useRouter();
+  const { dayCount, updateStreak } = useStreak();  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   // Combined loading state for UI
   const showTodosLoading = isLoadingTodos || isLoadingCompletions;
-  
-  // Check authentication status on load
-  useEffect(() => {
-    const checkAuthentication = async () => {
-      try {
-        const token = localStorage.getItem('sessionId');
-        
-        if (!token) {
-          setIsAuthenticated(false);
-          setAuthChecking(false);
-          return;
-        }
-        
-        // Verify token with the server
-        const res = await fetch('/api/security/verify-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
-        });
-        
-        const data = await res.json();
-        setIsAuthenticated(data.success);
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setAuthChecking(false);
-      }
-    };
-    
-    checkAuthentication();
-  }, []);
 
-  // Only fetch data if authenticated
+  // Redirect to welcome page if not authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isLoaded && !isSignedIn) {
+      router.push('/welcome');
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  // Fetch data when user is authenticated
+  useEffect(() => {
+    if (isSignedIn) {
       fetchTodos();
       fetchTotalScore();
       setRandomQuote();
     }
-  }, [isAuthenticated]);
+  }, [isSignedIn]);
+
+  // Only render if user is authenticated
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh'
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
   const fetchTodos = async () => {
     setIsLoadingTodos(true);
     try {
       const res = await fetch('/api/todos');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch todos: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
-      setTodos(data);
+      setTodos(Array.isArray(data) ? data : []);
       fetchCompletions();
     } catch (error) {
       console.error('Error fetching todos:', error);
+      setTodos([]); // Set empty array on error
+      // You could set an error state here if you want to show an error message
     } finally {
       setIsLoadingTodos(false);
     }
@@ -138,79 +135,108 @@ const Home = () => {
   const fetchTotalScore = async () => {
     try {
       const res = await fetch('/api/total-completion');
+      if (!res.ok) {
+        throw new Error(`Failed to fetch score data: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
-      setScoreData(data);
+      setScoreData({
+        totalScore: data.totalScore || 0,
+        totalPossibleScore: data.totalPossibleScore || 0,
+        improvement: data.improvement || 0,
+        todayScore: data.todayScore || 0,
+        todayPossibleScore: data.todayPossibleScore || 0,
+        completionPercentage: data.completionPercentage || 0
+      });
     } catch (error) {
       console.error('Error fetching total score data:', error);
+      // Set default values on error
+      setScoreData({
+        totalScore: 0,
+        totalPossibleScore: 0,
+        improvement: 0,
+        todayScore: 0,
+        todayPossibleScore: 0,
+        completionPercentage: 0
+      });
     }
-  };  const fetchCompletions = async () => {
+  }; const fetchCompletions = async () => {
     setIsLoadingCompletions(true);
     try {
-      const today = getAdjustedDateString();
-      const res = await fetch(`/api/daily-completion?date=${today}`);
+      const res = await fetch(`/api/completion`);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch completions: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
-      setCompletedTodos(data.completedTodos.map(todo => todo._id));
-      
-      // Refresh todos list to get updated completion status
-      const todosRes = await fetch('/api/todos');
-      const todosData = await todosRes.json();
-      setTodos(todosData);
+
+      if (data.success && data.completedTodos) {
+        setCompletedTodos(data.completedTodos);
+      } else {
+        setCompletedTodos([]);
+      }
     } catch (error) {
       console.error('Error fetching completions:', error);
+      setCompletedTodos([]);
     } finally {
       setIsLoadingCompletions(false);
     }
-  };
-  const handleTodoToggle = async (todoId) => {
+  }; const handleTodoToggle = async (todoId) => {
     if (!todoId) {
       console.error('No todoId provided to toggle');
       return;
     }
-    
+
     // Save original state before optimistic update
     const originalCompletedState = [...completedTodos];
-    const isComplete = completedTodos.includes(todoId);
-    
+    const isCurrentlyComplete = completedTodos.includes(todoId);
+
     try {
       // Optimistic update
-      const updatedCompletedTodos = isComplete 
-        ? completedTodos?.filter(id => id !== todoId)
-        : [...completedTodos, todoId];
-      
-      setCompletedTodos(updatedCompletedTodos);
-      
-      const method = isComplete ? 'DELETE' : 'POST';
-      const res = await fetch('/api/daily-completion', {
-        method,
+      if (isCurrentlyComplete) {
+        setCompletedTodos(prev => prev.filter(id => id !== todoId));
+      } else {
+        setCompletedTodos(prev => [...prev, todoId]);
+      }
+
+      const res = await fetch('/api/completion', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ todoId }),
+        body: JSON.stringify({
+          todoId,
+          date: new Date().toISOString()
+        }),
       });
 
       if (!res.ok) {
-        // If the request failed, revert to original state
-        setCompletedTodos(originalCompletedState);
-        throw new Error('Failed to update todo completion status');
+        throw new Error(`Failed to toggle completion: ${res.status} ${res.statusText}`);
       }
-        const data = await res.json();      if (data.success) {
-        fetchTotalScore();
-        updateStreak(); // Update streak data
-        // Refresh todos to get updated completion status
-        const todosRes = await fetch('/api/todos');
-        const todosData = await todosRes.json();
-        setTodos(todosData);
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Update completed todos with server response
+        setCompletedTodos(data.completedTodos || []);
+
+        // Update score data
+        setScoreData(prev => ({
+          ...prev,
+          todayScore: data.score || 0,
+          todayPossibleScore: data.totalPossibleScore || prev.todayPossibleScore,
+          completionPercentage: data.totalPossibleScore > 0
+            ? Math.round((data.score / data.totalPossibleScore) * 100)
+            : 0
+        }));
+
+        // Update streak
+        updateStreak();
       } else {
-        // Revert optimistic update if request reports failure
-        console.error('API returned success: false', data);
+        // Revert optimistic update if server request failed
         setCompletedTodos(originalCompletedState);
       }
     } catch (error) {
-      // Revert optimistic update on any error
       console.error('Error toggling todo completion:', error);
-      setCompletedTodos(originalCompletedState);
-      console.error('Error toggling todo:', error);
-      // Revert optimistic update if request fails
+      // Revert optimistic update on error
       setCompletedTodos(originalCompletedState);
     }
   };
@@ -237,14 +263,13 @@ const Home = () => {
     if (scoreData.todayPossibleScore === 0) return 0;
     return Math.round((scoreData.todayScore / scoreData.todayPossibleScore) * 100);
   };
-
   // Loading state
-  if (authChecking) {
+  if (!isLoaded) {
     return (
       <Layout>
         <Backdrop
-          sx={{ 
-            color: '#fff', 
+          sx={{
+            color: '#fff',
             zIndex: theme => theme.zIndex.drawer + 1,
             background: 'linear-gradient(135deg, rgba(66, 99, 235, 0.97), rgba(147, 112, 219, 0.97))'
           }}
@@ -267,14 +292,12 @@ const Home = () => {
         </Backdrop>
       </Layout>
     );
-  }
-
-  // Authentication screen
-  if (!isAuthenticated) {
+  }  // Authentication screen (admin password if needed)
+  if (!isAdminAuthenticated) {
     return (
       <Layout>
-        <Container 
-          maxWidth="md" 
+        <Container
+          maxWidth="md"
           component={motion.div}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -289,10 +312,10 @@ const Home = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  <Typography 
-                    variant="h3" 
-                    component="h1" 
-                    fontWeight={800} 
+                  <Typography
+                    variant="h3"
+                    component="h1"
+                    fontWeight={800}
                     gutterBottom
                     sx={{
                       background: 'linear-gradient(135deg, #4263EB 15%, #9370DB 85%)',
@@ -305,7 +328,7 @@ const Home = () => {
                     Your Better Self Awaits
                   </Typography>
                 </motion.div>
-                
+
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -347,7 +370,7 @@ const Home = () => {
                 </Box>
               </Box>
             </Grid>
-            
+
             <Grid item xs={12} md={6}>
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -371,12 +394,12 @@ const Home = () => {
                       Secure Access
                     </Typography>
                   </Box>
-                  
+
                   <Typography variant="body1" sx={{ mb: 4, color: theme.palette.text.secondary }}>
                     Enter your password to access your personalized dashboard.
                   </Typography>
-                  
-                  <TypeAdminPassword onSuccess={() => setIsAuthenticated(true)} />
+
+                  <TypeAdminPassword onSuccess={() => setIsAdminAuthenticated(true)} />
                 </Paper>
               </motion.div>
             </Grid>
@@ -387,56 +410,56 @@ const Home = () => {
   }
   return (
     <Layout>
-      <Container 
+      <Container
         maxWidth={false}
         component={motion.div}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        sx={{ 
+        sx={{
           py: { xs: 0.5, sm: 1 },
           px: { xs: 0.5, sm: 1, md: 2 },
           maxWidth: { xs: '100%', sm: '100%', md: '900px' },
           mx: 'auto'
         }}
       >
-        {/* Header with gradient accent and score */}        {/* Compact header with action buttons */}        <Box 
+        {/* Header with gradient accent and score */}        {/* Compact header with action buttons */}        <Box
           component={motion.div}
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          sx={{ 
+          sx={{
             mb: { xs: 1.5, sm: 2.5 },
-            display: 'flex', 
+            display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             justifyContent: 'space-between',
             alignItems: { xs: 'flex-start', sm: 'center' },
             gap: { xs: 1, sm: 2 },
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>            <Typography 
-              variant="h4" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 800, 
-                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' },
-                background: 'linear-gradient(to right, #4263EB, #9370DB)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                lineHeight: { xs: 1.2, sm: 1.3 },
-              }}
-            >
-              Today's Tasks
-            </Typography>
-            
-            <Chip 
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>            <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 800,
+              fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2.2rem' },
+              background: 'linear-gradient(to right, #4263EB, #9370DB)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              lineHeight: { xs: 1.2, sm: 1.3 },
+            }}
+          >
+            Today's Tasks
+          </Typography>
+
+            <Chip
               icon={<WhatshotIcon sx={{ fontSize: '0.85rem' }} />}
               label={`Day ${dayCount}`}
               color="primary"
               variant="outlined"
               size="small"
-              sx={{ 
-                fontWeight: 600, 
+              sx={{
+                fontWeight: 600,
                 borderRadius: 2,
                 '& .MuiChip-icon': {
                   color: theme.palette.warning.main
@@ -445,10 +468,10 @@ const Home = () => {
               }}
             />
           </Box>
-          
-          <Box 
-            sx={{ 
-              display: 'flex', 
+
+          <Box
+            sx={{
+              display: 'flex',
               alignItems: 'center',
               gap: 1.5,
               mt: { xs: 0.5, sm: 0 }
@@ -467,15 +490,15 @@ const Home = () => {
                 border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
               }}
             >
-              <EmojiEventsIcon 
-                sx={{ 
+              <EmojiEventsIcon
+                sx={{
                   color: theme.palette.warning.main,
                   fontSize: '1.2rem'
-                }} 
+                }}
               />
-              <Typography 
-                variant="body2" 
-                sx={{ 
+              <Typography
+                variant="body2"
+                sx={{
                   fontWeight: 700,
                   color: theme.palette.primary.main
                 }}
@@ -483,7 +506,7 @@ const Home = () => {
                 {scoreData.todayScore}/{scoreData.todayPossibleScore}
               </Typography>
             </Paper>
-            
+
             <Button
               variant="contained"
               startIcon={<EditIcon />}
@@ -520,83 +543,28 @@ const Home = () => {
             overflow: 'visible',
           }}        >
           {showTodosLoading ? (
-            <TodosLoading />
+            <LoadingState type="todos" message="Loading your tasks..." count={3} />
           ) : todos.length > 0 ? (
-            <Todos 
-              todos={todos} 
+            <Todos
+              todos={todos}
               completedTodos={completedTodos}
               onTodoToggle={handleTodoToggle}
             />
           ) : (
-            <Box
-              sx={{
-                textAlign: 'center',
-                py: { xs: 6, sm: 8 },
-                px: 4,
-                background: `linear-gradient(to bottom, ${alpha(theme.palette.background.paper, 0.8)}, ${alpha(theme.palette.background.paper, 0.6)})`,
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-              }}
-            >
-              <Box
-                component={motion.div}
-                animate={{ 
-                  y: [-5, 5],
-                  scale: [1, 1.05]
-                }}
-                transition={{ 
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                  ease: "easeInOut"
-                }}
-                sx={{ mb: 3 }}
-              >
-                <Box
-                  component="img"
-                  src="https://cdn-icons-png.flaticon.com/512/6194/6194029.png"
-                  alt="No tasks"
-                  sx={{ 
-                    width: 140,
-                    height: 140,
-                    opacity: 0.3
-                  }}
-                />
-              </Box>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
-                Ready to be productive?
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
-                Add your first task to start building better habits and tracking your daily progress
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                startIcon={<AddIcon />}
-                onClick={handleOpenModifyDialog}
-                sx={{
-                  borderRadius: '12px',
-                  px: 3,
-                  py: 1.2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                  boxShadow: '0 8px 20px rgba(66, 99, 235, 0.3)',
-                  background: 'linear-gradient(45deg, #4263EB 30%, #5C7CFA 90%)',
-                }}
-              >
-                Create Your First Task
-              </Button>
-            </Box>
+            <EmptyState
+              title="Ready to be productive?"
+              description="Add your first task to start building better habits and tracking your daily progress"
+              actionText="Create Your First Task"
+              onAction={handleOpenModifyDialog}
+              showStats={true}
+            />
           )}
         </Box>
 
         {/* Stats cards - Moved below todos */}
-        <Grid 
-          container 
-          spacing={2} 
+        <Grid
+          container
+          spacing={2}
           component={motion.div}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -605,7 +573,7 @@ const Home = () => {
         >
           {/* Completion Card */}
           <Grid item xs={12} sm={4}>
-            <Card 
+            <Card
               elevation={0}
               sx={{
                 borderRadius: 4,
@@ -641,7 +609,7 @@ const Home = () => {
                   {calculateCompletionPercentage()}%
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {console.log({todos})}
+                  {console.log({ todos })}
                   {todos?.filter(todo => todo?.completed).length} of {todos.length} tasks done
                 </Typography>
               </CardContent>
@@ -650,7 +618,7 @@ const Home = () => {
 
           {/* Streak Card */}
           <Grid item xs={12} sm={4}>
-            <Card 
+            <Card
               elevation={0}
               sx={{
                 borderRadius: 4,
@@ -694,7 +662,7 @@ const Home = () => {
 
           {/* Planner Card */}
           <Grid item xs={12} sm={4}>
-            <Card 
+            <Card
               elevation={0}
               sx={{
                 borderRadius: 4,
@@ -746,17 +714,17 @@ const Home = () => {
 
         {/* Quote - Beautiful and minimal */}
         <Quote text={quote} />
-        
 
 
- 
-  
-        
+
+
+
+
         {/* Progress link */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
             mt: 4,
             opacity: 0.8,
             '&:hover': {
@@ -765,7 +733,7 @@ const Home = () => {
             transition: 'opacity 0.2s ease'
           }}
         >
-          <Button 
+          <Button
             onClick={() => router.push('/progress')}
             endIcon={<ArrowForwardIcon />}
             variant="contained"
@@ -786,15 +754,15 @@ const Home = () => {
           >
             View Your Progress Dashboard
           </Button>
-        </Box>        {/* Modify dialog */}        <Dialog 
-          open={modifyDialogOpen} 
+        </Box>        {/* Modify dialog */}        <Dialog
+          open={modifyDialogOpen}
           onClose={handleCloseModifyDialog}
           maxWidth="sm"
           fullWidth
           fullScreen={isMobile}
         >
-          <ModifyTodosNew 
-            open={modifyDialogOpen} 
+          <ModifyTodosNew
+            open={modifyDialogOpen}
             onClose={handleCloseModifyDialog}
             todos={todos}
           />

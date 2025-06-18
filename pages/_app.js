@@ -1,6 +1,7 @@
 // pages/_app.js
 import "@/styles/globals.css";
 import { createTheme, ThemeProvider, CssBaseline, responsiveFontSizes } from '@mui/material';
+import { ClerkProvider } from '@clerk/nextjs';
 import { StartDateProvider } from "@/contexts/StartDateContext";
 import { StreakProvider } from "@/contexts/StreakContext";
 import PageTransition from "@/components/PageTransition";
@@ -8,7 +9,6 @@ import { Inter } from 'next/font/google';
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import AuthGuard from '@/components/AuthGuard';
 
 // Load Inter font
 const inter = Inter({
@@ -147,45 +147,32 @@ let theme = createTheme({
 // Make fonts responsive
 theme = responsiveFontSizes(theme);
 
-// Define public paths that don't need authentication
-const publicPaths = ['/sign-in', '/sign-up', '/about', '/api'];
-
-function AppWithAuth({ Component, pageProps }) {
+function App({ Component, pageProps }) {
   const router = useRouter();
   
-  // Check if the current path is in the public paths list
-  const isPublicPath = publicPaths.some(path => 
-    router.pathname === path || router.pathname.startsWith(path + '/')
-  );
-
-  // If it's a public path, render the component directly
-  // Otherwise, wrap it with AuthGuard
-  const ComponentToRender = isPublicPath ? Component : AuthGuard(Component);
-
   return (
-    <>
+    <ClerkProvider>
       <Head>
-        <title>Another Me | Todo Tracker</title>
+        <title>Another Me | Personal Development Companion</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="description" content="Another Me - A minimalist todo tracking application" />
+        <meta name="description" content="Another Me - Your ultimate personal development companion with journaling, planning, and habit tracking" />
         <link rel="icon" href="/favicon2.png" />
       </Head>
       
       <ThemeProvider theme={theme}>
-        <CssBaseline />        <main className={inter.className}>
+        <CssBaseline />
+        <main className={inter.className}>
           <StartDateProvider>
             <StreakProvider>
               <PageTransition>
-                <ComponentToRender {...pageProps} />
+                <Component {...pageProps} />
               </PageTransition>
             </StreakProvider>
           </StartDateProvider>
         </main>
       </ThemeProvider>
-    </>
+    </ClerkProvider>
   );
 }
 
-export default function App(props) {
-  return <AppWithAuth {...props} />;
-}
+export default App;

@@ -2,6 +2,8 @@
 import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
 import Todo from '@/models/Todo';
+import { getUserId } from '@/middleware/clerkAuth';
+import { decryptFields } from '@/utils/encryption';
 import { 
   startOfDay, 
   endOfDay, 
@@ -18,8 +20,12 @@ const handler = async (req, res) => {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
   try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
     // Get query parameters
     const { period = 'day', category = 'all' } = req.query;
     const today = new Date();
@@ -42,21 +48,26 @@ const handler = async (req, res) => {
         break;
     }
     
-    // Find all relevant todos
-    let todoQuery = {};
+    // Find all relevant todos and decrypt them
+    let todoQuery = { userId };
     if (category !== 'all') {
       todoQuery.category = category;
     }
     const todos = await Todo.find(todoQuery);
+    const decryptedTodos = todos.map(todo => {
+      const todoObj = todo.toObject();
+      return decryptFields(todoObj, ['task', 'category'], userId);
+    });
 
-    // Get all daily completions for the period
+    // Get daily completions for the period
     const dailyCompletions = await DailyCompletion.find({
+      userId,
       date: { $gte: startDate, $lte: endDate }
     }).populate('completedTodos');
 
     // Calculate completion stats
     let completedTasks = 0;
-    let totalPossibleTasks = todos.length * (period === 'day' ? 1 : (period === 'week' ? 7 : 30));
+    let totalPossibleTasks = decryptedTodos.length * (period === 'day' ? 1 : (period === 'week' ? 7 : 30));
     
     // For tracking category stats
     const categoryStats = {};
@@ -65,10 +76,19 @@ const handler = async (req, res) => {
     // Process each daily completion
     dailyCompletions.forEach(dc => {
       if (dc.completedTodos && dc.completedTodos.length > 0) {
+        // Decrypt completed todos
+        const decryptedCompletedTodos = dc.completedTodos.map(todo => {
+          if (todo.toObject) {
+            const todoObj = todo.toObject();
+            return decryptFields(todoObj, ['task', 'category'], userId);
+          }
+          return todo;
+        });
+
         // Filter by category if needed
         const relevantCompletedTodos = category === 'all' 
-          ? dc.completedTodos 
-          : dc.completedTodos?.filter(todo => todo.category === category);
+          ? decryptedCompletedTodos 
+          : decryptedCompletedTodos.filter(todo => todo.category === category);
 
         // Add to completed count
         completedTasks += relevantCompletedTodos.length;
@@ -82,7 +102,7 @@ const handler = async (req, res) => {
     });
 
     // Calculate totals by category
-    todos.forEach(todo => {
+    decryptedTodos.forEach(todo => {
       const todoCategory = todo.category;
       totalByCategory[todoCategory] = (totalByCategory[todoCategory] || 0) + 1;
     });
@@ -115,7 +135,7 @@ const handler = async (req, res) => {
       : 0;
 
     // Get streak data (consecutive days with completions)
-    const streak = await calculateStreak();
+    const streak = await calculateStreak(userId);
 
     // Generate insights
     const insights = {
@@ -140,7 +160,7 @@ const handler = async (req, res) => {
 };
 
 // Helper function to calculate current streak
-async function calculateStreak() {
+async function calculateStreak(userId) {
   const today = new Date();
   let currentStreak = 0;
 
@@ -151,6 +171,7 @@ async function calculateStreak() {
     const endOfCheckDate = endOfDay(checkDate);
     
     const completion = await DailyCompletion.findOne({
+      userId,
       date: { $gte: startOfCheckDate, $lte: endOfCheckDate },
       'completedTodos.0': { $exists: true } // Check if completedTodos array is not empty
     });

@@ -3,6 +3,8 @@ import connectToMongo from '@/middleware/connectToMongo';
 import DailyCompletion from '@/models/DailyCompletion';
 import Config from '@/models/Config';
 import Todo from '@/models/Todo';
+import { getUserId } from '@/middleware/clerkAuth';
+import { decryptArray, decryptFields, ENCRYPTED_FIELDS } from '@/utils/encryption';
 import { format, startOfDay, parseISO } from 'date-fns';
 
 /**
@@ -13,7 +15,16 @@ import { format, startOfDay, parseISO } from 'date-fns';
 const handler = async (req, res) => {
   if (req.method === 'POST') {
     try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const { todoId, date } = req.body;
+      
+      if (!todoId) {
+        return res.status(400).json({ error: 'Todo ID is required' });
+      }
       
       // Use provided date or default to today
       const dateObj = date ? parseISO(date) : new Date();
@@ -22,11 +33,13 @@ const handler = async (req, res) => {
       
       // Find or create the daily completion record for this date
       let dailyCompletion = await DailyCompletion.findOne({ 
+        userId,
         date: { $gte: dayStart, $lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) }
       });
       
       if (!dailyCompletion) {
         dailyCompletion = new DailyCompletion({ 
+          userId,
           date: dayStart, 
           completedTodos: [],
           score: 0,
@@ -34,18 +47,22 @@ const handler = async (req, res) => {
         });
       }
 
-      // Find the todo
-      const todo = await Todo.findById(todoId);
+      // Find the todo and verify it belongs to the user
+      const todo = await Todo.findOne({ _id: todoId, userId });
       if (!todo) {
-        return res.status(404).json({ error: 'Todo not found' });
+        return res.status(404).json({ error: 'Todo not found or access denied' });
       }
       
-      // Calculate score based on todo difficulty
-      const todoScore = todo.score || getDifficultyScore(todo.difficulty);
+      // Decrypt the todo to get its details
+      const decryptedTodo = decryptFields(todo, ENCRYPTED_FIELDS.TODO, userId);
       
-      // Get all todos to calculate total possible score
-      const allTodos = await Todo.find({});
-      const totalPossibleScore = allTodos.reduce((sum, t) => sum + (t.score || getDifficultyScore(t.difficulty)), 0);
+      // Calculate score based on todo difficulty
+      const todoScore = todo.score || getDifficultyScore(decryptedTodo.difficulty);
+      
+      // Get all user's todos to calculate total possible score
+      const allTodos = await Todo.find({ userId });
+      const decryptedAllTodos = decryptArray(allTodos, ENCRYPTED_FIELDS.TODO, userId);
+      const totalPossibleScore = decryptedAllTodos.reduce((sum, t) => sum + (t.score || getDifficultyScore(t.difficulty)), 0);
       
       // Update daily completion record
       const isCompleted = dailyCompletion.completedTodos.some(id => id.toString() === todoId);
@@ -55,10 +72,12 @@ const handler = async (req, res) => {
         dailyCompletion.completedTodos = dailyCompletion.completedTodos?.filter(
           id => id.toString() !== todoId
         );
-        dailyCompletion.score -= todoScore;
+        dailyCompletion.score = Math.max(0, dailyCompletion.score - todoScore);
       } else {
         // Add todo to completedTodos
-        dailyCompletion.completedTodos.push(todoId);
+        if (!dailyCompletion.completedTodos.includes(todoId)) {
+          dailyCompletion.completedTodos.push(todoId);
+        }
         dailyCompletion.score += todoScore;
       }
       
@@ -69,7 +88,7 @@ const handler = async (req, res) => {
       await dailyCompletion.save();
       
       // Get the completion status for each todo (to return to client)
-      const allCompletionStatus = await getAllTodosCompletionStatus(dateObj);
+      const allCompletionStatus = await getAllTodosCompletionStatus(userId, dateObj);
       
       return res.status(200).json({
         success: true,
@@ -82,6 +101,29 @@ const handler = async (req, res) => {
     } catch (error) {
       console.error('Error updating completion status:', error);
       return res.status(500).json({ error: 'Failed to update completion status' });
+    }
+  } else if (req.method === 'GET') {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { date } = req.query;
+      const dateObj = date ? parseISO(date) : new Date();
+      
+      // Get the completion status for all todos
+      const allCompletionStatus = await getAllTodosCompletionStatus(userId, dateObj);
+      
+      return res.status(200).json({
+        success: true,
+        completedTodos: allCompletionStatus.filter(todo => todo.completed).map(todo => todo._id),
+        allCompletionStatus,
+        date: format(dateObj, 'yyyy-MM-dd')
+      });
+    } catch (error) {
+      console.error('Error fetching completion status:', error);
+      return res.status(500).json({ error: 'Failed to fetch completion status' });
     }
   } else {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -105,23 +147,29 @@ function getDifficultyScore(difficulty) {
 /**
  * Get completion status for all todos on a given date
  */
-async function getAllTodosCompletionStatus(date) {
+async function getAllTodosCompletionStatus(userId, date) {
   const dayStart = startOfDay(date);
   
   // Find completion record for the date
   const dailyCompletion = await DailyCompletion.findOne({
+    userId,
     date: { $gte: dayStart, $lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) }
   });
   
-  // Get all todos
-  const allTodos = await Todo.find({});
+  // Get all user's todos
+  const allTodos = await Todo.find({ userId });
+  
+  // Decrypt todos before processing
+  const decryptedTodos = decryptArray(allTodos, ENCRYPTED_FIELDS.TODO, userId);
   
   // Map todos to their completion status
-  return allTodos.map(todo => ({
+  return decryptedTodos.map(todo => ({
     _id: todo._id,
     title: todo.title,
     score: todo.score || getDifficultyScore(todo.difficulty),
     category: todo.category,
+    difficulty: todo.difficulty,
+    priority: todo.priority,
     completed: dailyCompletion?.completedTodos.some(id => id.toString() === todo._id.toString()) || false
   }));
 }

@@ -19,16 +19,36 @@ import {
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
+import LogoutIcon from '@mui/icons-material/Logout';
 import Layout from '@/components/Layout';
 import AuthGuard from '@/components/AuthGuard';
+import { useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/router';
 
 const Settings = () => {
+  const { signOut } = useClerk();
+  const router = useRouter();
+  
   // States for reset dialogs
   const [openResetDate, setOpenResetDate] = useState(false);
   const [openResetProgress, setOpenResetProgress] = useState(false);
+  const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [alertMessage, setAlertMessage] = useState(null);
   const [alertSeverity, setAlertSeverity] = useState('success');
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/welcome');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setAlertSeverity('error');
+      setAlertMessage('Failed to logout. Please try again.');
+    }
+    setOpenLogoutDialog(false);
+  };
 
   // Handle opening and closing dialogs
   const handleOpenResetDate = () => setOpenResetDate(true);
@@ -192,6 +212,40 @@ const Settings = () => {
                   >
                     Reset Progress
                   </Button>
+                </Box>              </CardContent>
+            </Card>
+          </Paper>
+
+          <Paper elevation={1}>
+            <Card>
+              <CardContent>
+                <Box 
+                  display="flex" 
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between" 
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  gap={{ xs: 2, sm: 0 }}
+                >
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Sign Out
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Sign out of your account and return to the welcome page.
+                    </Typography>
+                  </Box>
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    onClick={() => setOpenLogoutDialog(true)}
+                    startIcon={<LogoutIcon />}
+                    sx={{ 
+                      flexShrink: 0,
+                      minWidth: { xs: '100%', sm: 'auto' }
+                    }}
+                  >
+                    Sign Out
+                  </Button>
                 </Box>
               </CardContent>
             </Card>
@@ -258,6 +312,25 @@ const Settings = () => {
             disabled={confirmText !== 'reset progress'}
           >
             Reset
+          </Button>        </DialogActions>
+      </Dialog>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={openLogoutDialog} onClose={() => setOpenLogoutDialog(false)}>
+        <DialogTitle>Sign Out</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to sign out? You'll be redirected to the welcome page.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenLogoutDialog(false)}>Cancel</Button>
+          <Button 
+            onClick={handleLogout} 
+            color="error" 
+            variant="contained"
+          >
+            Sign Out
           </Button>
         </DialogActions>
       </Dialog>

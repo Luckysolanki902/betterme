@@ -20,7 +20,8 @@ const ProgressCard = ({
   icon, 
   color,
   animationDelay = 0,
-  progressType = "circular" // circular or linear
+  progressType = "circular", // circular or linear
+  suffix = null // optional suffix like "days" or "%" to display
 }) => {
   const theme = useTheme();
   const percentage = Math.round((value / maxValue) * 100) || 0;
@@ -116,13 +117,12 @@ const ProgressCard = ({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-            >
-              <Typography
+            >              <Typography
                 variant="h4"
                 component="div"
                 sx={{ fontWeight: 700 }}
               >
-                {percentage}%
+                {value}{maxValue && !suffix ? '%' : suffix ? ` ${suffix}` : ''}
               </Typography>
             </Box>
           </Box>
@@ -158,7 +158,7 @@ const ProgressCard = ({
                   color: progressColor
                 }}
               >
-                {percentage}%
+                {value}{maxValue && !suffix ? '%' : suffix ? ` ${suffix}` : ''}
               </Typography>
             </Box>
           </Box>
