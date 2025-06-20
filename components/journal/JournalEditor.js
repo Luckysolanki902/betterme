@@ -21,26 +21,50 @@ import {
   alpha,
   useMediaQuery
 } from '@mui/material';
-import FormatBoldIcon from '@mui/icons-material/FormatBold';
-import FormatItalicIcon from '@mui/icons-material/FormatItalic';
-import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
-import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import CloseIcon from '@mui/icons-material/Close';
-import TitleIcon from '@mui/icons-material/Title';
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import EditIcon from '@mui/icons-material/Edit';
 import dayjs from 'dayjs';
 import styles from './JournalStyles.module.css';
 import MoodDisplay from './MoodDisplay';
 import { DEFAULT_MOOD } from '@/utils/moods';
+import dynamic from 'next/dynamic';
 
-// Journal editor component with Notion-like editing experience
+// Try to load editors with multiple fallbacks
+const RichTextEditor = dynamic(() => 
+  import('../lexical/LexicalRichTextEditorNew')
+  .catch(() => {
+    console.warn('Failed to load LexicalRichTextEditorNew, falling back to BasicLexicalEditor');
+    return import('../lexical/BasicLexicalEditor')
+    .catch(() => {
+      console.warn('Failed to load BasicLexicalEditor, falling back to ContentEditableEditor');
+      return import('../lexical/ContentEditableEditor')
+      .catch(() => {
+        console.warn('Failed to load ContentEditableEditor, falling back to RichTextEditor');
+        return import('../lexical/RichTextEditor')
+          .catch(() => {
+            console.warn('Failed to load RichTextEditor, falling back to BasicTextEditor');
+            return import('../lexical/BasicTextEditor');
+          });
+      });
+    });
+  }), 
+  { 
+    ssr: false,
+    loading: () => <Box sx={{ 
+      height: 400, 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center' 
+    }}>
+      <CircularProgress />
+    </Box>
+  }
+);
+
+// Journal editor component with Lexical rich text editing
 const JournalEditor = ({ 
   date = dayjs(), 
   entry = null, 
@@ -50,12 +74,14 @@ const JournalEditor = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-    // State for journal entry data
+  
+  // State for journal entry data
   const [title, setTitle] = useState(entry?.title || '');
-  const [content, setContent] = useState(entry?.content || [{ type: 'paragraph', content: '' }]);
+  const [editorContent, setEditorContent] = useState(entry?.content?.editorState || null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState('');
+  
   // State for suggestions
   const [suggestionDialog, setSuggestionDialog] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -66,8 +92,9 @@ const JournalEditor = ({
   
   // Default suggestions to show when no AI suggestion is available
   const defaultSuggestions = [
-  "Let your thoughts flow — fresh writing prompts appear every 30 seconds to guide your journey."
+    "Let your thoughts flow — fresh writing prompts appear every 30 seconds to guide your journey."
   ];
+  
   // State for mood management
   const [isManuallyUpdatingMood, setIsManuallyUpdatingMood] = useState(false);
   const [isUserTyping, setIsUserTyping] = useState(false);
@@ -80,42 +107,60 @@ const JournalEditor = ({
   const suggestionChangeTimer = useRef(null);
   const autoSaveInterval = useRef(null);
   const autoMoodUpdateInterval = useRef(null);
-  const typingTimer = useRef(null);  // Constants
+  const typingTimer = useRef(null);
+  
+  // Constants
   const MOOD_UPDATE_COOLDOWN = 10000; // 10 seconds
   const AUTO_SUGGESTION_DELAY = 30000; // 30 seconds between suggestion refreshes
   const CONTENT_CHANGE_SUGGESTION_DELAY = 10000; // 10 seconds after content changes
   const AUTOSAVE_DELAY = 30000; // 30 seconds for auto-save
-  const AUTO_MOOD_UPDATE_DELAY = 45000; // 45 seconds for auto mood update= 45000
+  const AUTO_MOOD_UPDATE_DELAY = 45000; // 45 seconds for auto mood update
 
   // Get random default suggestion
   const getRandomDefaultSuggestion = useCallback(() => {
-    return defaultSuggestions[Math.floor(Math.random() * defaultSuggestions.length)];  }, [defaultSuggestions]);
-
+    return defaultSuggestions[Math.floor(Math.random() * defaultSuggestions.length)];
+  }, [defaultSuggestions]);
   // Effect to update local state when entry prop changes - but only once initially
   useEffect(() => {
     if (entry && !hasChanges) {
       setTitle(entry.title || '');
-      setContent(entry.content || [{ type: 'paragraph', content: '' }]);
+      setEditorContent(entry.content?.editorState || null);
     }
-  }, [entry]); // Removed isUserTyping dependency to prevent constant overrides
+  }, [entry, hasChanges]); 
   
-  // Calculate word count from content blocks
+  // Calculate word count from Lexical editor content
   const calculateWordCount = useCallback(() => {
-    let count = 0;
-    content.forEach(block => {
-      if (block.content) {
-        count += block.content.trim().split(/\s+/).filter(Boolean).length;
-      }
-      if (Array.isArray(block.listItems)) {
-        block.listItems.forEach(item => {
-          if (item.content) {
-            count += item.content.trim().split(/\s+/).filter(Boolean).length;
-          }
-        });
-      }
-    });
-    return count;
-  }, [content]);
+    if (!editorContent) return 0;
+    
+    try {
+      // Parse the JSON content to extract text
+      const parsedContent = JSON.parse(editorContent);
+      
+      // Function to extract text from all nodes recursively
+      const extractTextFromNodes = (nodes) => {
+        if (!nodes || !Array.isArray(nodes)) return '';
+        
+        return nodes.map(node => {
+          // Text nodes have text property
+          if (node.text) return node.text;
+          
+          // Recursively extract from children
+          if (node.children) return extractTextFromNodes(node.children);
+          
+          return '';
+        }).join(' ');
+      };
+      
+      // Extract text from the root's children
+      const text = extractTextFromNodes(parsedContent.root.children);
+      
+      // Count words
+      return text.trim().split(/\s+/).filter(Boolean).length;
+    } catch (e) {
+      console.error('Error calculating word count:', e);
+      return 0;
+    }
+  }, [editorContent]);
   
   // Handle saving the journal entry
   const handleSave = useCallback(async (isManualSave = false) => {
@@ -125,12 +170,16 @@ const JournalEditor = ({
     setError('');
     
     try {
-      const wordCount = calculateWordCount();      const entryData = {
+      const wordCount = calculateWordCount();
+      
+      const entryData = {
         entryDate: date,
         title,
-        content,
+        content: {
+          editorState: editorContent
+        },
         mood: entry?.mood || DEFAULT_MOOD,
-        tags: [], // Remove tags
+        tags: [], // Remove tags for simplicity
         wordCount,
         forceMoodUpdate: isManualSave,
       }
@@ -1042,6 +1091,18 @@ const JournalEditor = ({
         return null;
     }
   };
+  // Handle content change from Lexical editor
+  const handleEditorChange = (editorStateStr) => {
+    setEditorContent(editorStateStr);
+    setHasChanges(true);
+    setIsUserTyping(true);
+    
+    // Reset the typing timer
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => {
+      setIsUserTyping(false);
+    }, 1000);
+  };
 
   // Return the editor component
   return (
@@ -1185,64 +1246,13 @@ const JournalEditor = ({
               overflow: 'hidden',
               borderColor: theme.palette.divider
             }}
-          >
-            <Box className={styles.editorToolbar}>
-              <Tooltip title="Heading 1">
-                <IconButton size="small" onClick={() => handleAddBlock('heading1')}>
-                  <TitleIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Heading 2">
-                <IconButton size="small" onClick={() => handleAddBlock('heading2')}>
-                  <TitleIcon sx={{ transform: 'scale(0.85)' }} />
-                </IconButton>
-              </Tooltip>
-              
-              {/* <div className={styles.toolbarDivider} /> */}
-              
-              {/* <Tooltip title="Bold">
-                <IconButton size="small" onClick={() => applyFormatting('bold')}>
-                  <FormatBoldIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Italic">
-                <IconButton size="small" onClick={() => applyFormatting('italic')}>
-                  <FormatItalicIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Underline">
-                <IconButton size="small" onClick={() => applyFormatting('underline')}>
-                  <FormatUnderlinedIcon />
-                </IconButton>
-              </Tooltip> */}
-              
-              <div className={styles.toolbarDivider} />
-              
-              <Tooltip title="Bulleted List">
-                <IconButton size="small" onClick={() => handleAddBlock('bulletList')}>
-                  <FormatListBulletedIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Numbered List">
-                <IconButton size="small" onClick={() => handleAddBlock('numberedList')}>
-                  <FormatListNumberedIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <div className={styles.toolbarDivider} />
-              
-              <Tooltip title="Quote">
-                <IconButton size="small" onClick={() => handleAddBlock('quote')}>
-                  <FormatQuoteIcon />
-                </IconButton>
-              </Tooltip>
-              
-              <div className={styles.toolbarDivider} />
-                <Tooltip title="Get writing suggestions">
+          >            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              padding: '8px 16px', 
+              borderBottom: `1px solid ${theme.palette.divider}` 
+            }}>
+              <Tooltip title="Get writing suggestions">
                 <IconButton 
                   size="small" 
                   onClick={() => getWritingSuggestions('question')}
@@ -1254,9 +1264,14 @@ const JournalEditor = ({
               </Tooltip>
             </Box>
             
-            {/* Content blocks */}
+            {/* Lexical Editor */}
             <Box sx={{ p: 2, minHeight: '40vh', position: 'relative' }}>
-              {content.map((block, index) => renderBlock(block, index))}
+              <RichTextEditor
+                initialState={editorContent}
+                onChange={handleEditorChange}
+                placeholder="Start writing your journal entry..."
+                autoFocus={true}
+              />
             </Box>
           </Paper>
         </Box>

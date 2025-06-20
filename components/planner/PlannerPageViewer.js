@@ -1,5 +1,5 @@
 // components/planner/PlannerPageViewer.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -19,28 +19,44 @@ import {
   useTheme,
   alpha,
   useMediaQuery,
+  Chip,
+  Snackbar,
+  Fade,
+  Slide,
+  Tooltip,
+  CircularProgress,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useRouter } from 'next/router';
 import PlannerContentEditor from './PlannerContentEditor';
 import styles from './PlannerStyles.module.css';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { countWordsInLexicalContent } from '@/utils/plannerUtils';
 
 const PlannerPageViewer = ({ pageId }) => {
   const [page, setPage] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ title: '', description: '', content: [] });
+  const [isEditing, setIsEditing] = useState(true); // Default to edit mode
+  const [editData, setEditData] = useState({ title: '', description: '', content: { editorState: null } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saveLoading, setSaveLoading] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);  const [breadcrumbs, setBreadcrumbs] = useState([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [breadcrumbs, setBreadcrumbs] = useState([]);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveFeedbackOpen, setSaveFeedbackOpen] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   // Fetch page data
   useEffect(() => {
     if (!pageId) return;
@@ -48,25 +64,61 @@ const PlannerPageViewer = ({ pageId }) => {
     const fetchPage = async () => {
       setLoading(true);
       setError(null);
-        try {
+      try {
         const res = await fetch(`/api/planner/${pageId}`);
         
         if (!res.ok) {
           throw new Error(`Failed to fetch page: ${res.status}`);
         }
-        
-        const data = await res.json();
+          const data = await res.json();
         setPage(data);
+        
+        // Validate that we have proper editorState data
+        let editorState = null;
+        if (data.content && data.content.editorState) {
+          // Make sure editorState is valid JSON
+          try {
+            if (typeof data.content.editorState === 'string') {
+              const parsed = JSON.parse(data.content.editorState);
+              if (parsed && parsed.root) {
+                editorState = data.content.editorState;
+                console.log('Valid editor state found in API response');
+              } else {
+                console.warn('Invalid editor state structure in API response');
+                editorState = null;
+              }
+            } else {
+              console.warn('Editor state is not a string in API response');
+              editorState = null;
+            }
+          } catch (e) {
+            console.error('Failed to parse editor state from API:', e);
+            editorState = null;
+          }
+        }
         
         // Set initial edit data
         setEditData({
           title: data.title,
           description: data.description || '',
-          content: data.content || [],
+          content: { 
+            editorState: editorState
+          },
         });
         
+        // Calculate word count if content exists
+        if (data.content?.editorState) {
+          try {
+            const count = countWordsInLexicalContent(data.content.editorState);
+            setWordCount(count);
+          } catch (e) {
+            console.warn('Error calculating initial word count:', e);
+          }
+        }
+        
         // Build breadcrumbs
-        await buildBreadcrumbs(data.parentId);      } catch (error) {
+        await buildBreadcrumbs(data.parentId);
+      } catch (error) {
         console.error('Error fetching page:', error);
         setError('Failed to load page');
         // Redirect back to planner home after 2 seconds on error
@@ -80,6 +132,21 @@ const PlannerPageViewer = ({ pageId }) => {
     
     fetchPage();
   }, [pageId]);
+
+  // Handle content changes to update word count
+  const handleContentChange = useCallback((newContent) => {
+    setEditData(prev => ({ ...prev, content: newContent }));
+    
+    // Update word count
+    if (newContent?.editorState) {
+      try {
+        const count = countWordsInLexicalContent(newContent.editorState);
+        setWordCount(count);
+      } catch (e) {
+        console.warn('Error calculating word count on change:', e);
+      }
+    }
+  }, []);
 
   // Build breadcrumb trail
   const buildBreadcrumbs = async (parentId) => {
@@ -120,6 +187,7 @@ const PlannerPageViewer = ({ pageId }) => {
     
     try {
       setSaveLoading(true);
+      setError(null);
       
       const res = await fetch(`/api/planner/${pageId}`, {
         method: 'PUT',
@@ -130,20 +198,32 @@ const PlannerPageViewer = ({ pageId }) => {
       if (!res.ok) {
         throw new Error('Failed to save page');
       }
-        const updatedPage = await res.json();
+      
+      const updatedPage = await res.json();
       setPage(updatedPage);
       
       // Also update the edit data to reflect the saved changes
       setEditData({
         title: updatedPage.title,
         description: updatedPage.description || '',
-        content: updatedPage.content || [],
+        content: {
+          editorState: updatedPage.content?.editorState || null
+        }
       });
+      
+      // Show save success feedback
+      setSaveSuccess(true);
+      setSaveFeedbackOpen(true);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setSaveFeedbackOpen(false);
+      }, 3000);
       
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving page:', error);
-      setError('Failed to save changes');
+      setError('Failed to save changes. Please try again.');
     } finally {
       setSaveLoading(false);
     }
@@ -174,9 +254,54 @@ const PlannerPageViewer = ({ pageId }) => {
     }
   };
 
-  // Handle content changes
-  const handleContentChange = (newContent) => {
-    setEditData({ ...editData, content: newContent });
+  // Auto-save function using the PlannerContentEditor's onSave prop
+  const handleAutoSave = async (contentUpdate) => {
+    if (!editData.title.trim()) {
+      return Promise.reject(new Error('Page title cannot be empty'));
+    }
+    
+    try {
+      const payload = {
+        ...editData,
+        content: contentUpdate
+      };
+      
+      const res = await fetch(`/api/planner/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!res.ok) {
+        throw new Error(`Failed to save page: ${res.status}`);
+      }
+      
+      const updatedPage = await res.json();
+      setPage(updatedPage);
+      
+      // Update edit data with the latest saved version
+      setEditData(prev => ({
+        ...prev,
+        content: {
+          editorState: updatedPage.content?.editorState || null
+        }
+      }));
+      
+      // Show brief save success feedback
+      setSaveSuccess(true);
+      setSaveFeedbackOpen(true);
+      
+      // Hide success message after 2 seconds
+      setTimeout(() => {
+        setSaveFeedbackOpen(false);
+      }, 2000);
+      
+      return updatedPage;
+    } catch (error) {
+      console.error('Error auto-saving page:', error);
+      setError('Auto-save failed. Your changes may not be saved.');
+      throw error;
+    }
   };
 
   // Cancel editing
@@ -184,7 +309,9 @@ const PlannerPageViewer = ({ pageId }) => {
     setEditData({
       title: page.title,
       description: page.description || '',
-      content: page.content || [],
+      content: {
+        editorState: page.content?.editorState || null
+      }
     });
     setIsEditing(false);
   };
@@ -210,7 +337,15 @@ const PlannerPageViewer = ({ pageId }) => {
   // Error state
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 4 }}>
+      <Alert 
+        severity="error" 
+        sx={{ mb: 4 }}
+        action={
+          <Button color="inherit" size="small" onClick={() => setError(null)}>
+            Dismiss
+          </Button>
+        }
+      >
         {error}
       </Alert>
     );
@@ -270,6 +405,10 @@ const PlannerPageViewer = ({ pageId }) => {
 
       <Paper
         elevation={0}
+        component={motion.div}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
         sx={{
           p: { xs: 2, sm: 3 },
           border: `1px solid ${theme.palette.divider}`,
@@ -278,7 +417,8 @@ const PlannerPageViewer = ({ pageId }) => {
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Box sx={{ flex: 1 }}>            {isEditing ? (
+          <Box sx={{ flex: 1 }}>
+            {isEditing ? (
               <>
                 <TextField
                   fullWidth
@@ -297,158 +437,201 @@ const PlannerPageViewer = ({ pageId }) => {
                       },
                       '&::after': {
                         display: 'none',
-                      },
+                      }
                     }
                   }}
-                  sx={{ mb: 1 }}
+                  autoFocus
                 />
+                {!editData.title.trim() && (
+                  <Typography variant="caption" color="error">
+                    Title is required
+                  </Typography>
+                )}
+              </>
+            ) : (
+              <Typography 
+                variant="h4" 
+                component="h1"
+                sx={{ 
+                  fontWeight: 700,
+                  wordBreak: 'break-word',
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                {page.title}
+              </Typography>
+            )}
+            
+            {isEditing ? (
+              <TextField
+                fullWidth
+                placeholder="Add a description (optional)"
+                value={editData.description || ''}
+                onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                variant="standard"
+                sx={{ mt: 1 }}
+                InputProps={{
+                  sx: { 
+                    fontSize: '1rem',
+                    color: 'text.secondary',
+                    '&::before': {
+                      display: 'none',
+                    },
+                    '&::after': {
+                      display: 'none',
+                    }
+                  }
+                }}
+              />
+            ) : (
+              page.description && (
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    mt: 1
+                  }}
+                >
+                  {page.description}
+                </Typography>
+              )
+            )}
+            
+            {/* Page metadata */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              mt: 2, 
+              flexWrap: 'wrap',
+              color: alpha(theme.palette.text.primary, 0.6),
+              fontSize: '0.875rem'
+            }}>
+              {/* Created date */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CalendarTodayIcon fontSize="small" />
+                <Typography variant="caption">
+                  Created {page.createdAt ? format(new Date(page.createdAt), 'MMM d, yyyy') : 'Just now'}
+                </Typography>
+              </Box>
+              
+              {/* Last updated */}
+              {page.updatedAt && page.updatedAt !== page.createdAt && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <AccessTimeIcon fontSize="small" />
+                  <Typography variant="caption">
+                    Updated {format(new Date(page.updatedAt), 'MMM d, yyyy')}
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* Word count */}
+              <Chip 
+                size="small" 
+                label={`${wordCount} words`}
+                sx={{ 
+                  height: 20,
+                  fontSize: '0.75rem',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  '.MuiChip-label': { px: 1 }
+                }} 
+              />
+            </Box>
+          </Box>
+          
+          {/* Action buttons */}
+          <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+            {!isEditing ? (
+              <>
+                <Tooltip title="Edit page">
+                  <IconButton onClick={() => setIsEditing(true)}>
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete page">
+                  <IconButton color="error" onClick={() => setDeleteDialogOpen(true)}>
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                </Tooltip>
               </>
             ) : (
               <>
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    fontWeight: 700,
-                    fontSize: '1.75rem',
-                    letterSpacing: '-0.01em',
-                    background: 'linear-gradient(to right, #4263EB, #9370DB)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    display: 'inline-block',
-                    pb: 0.5,
-                  }}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSave}
+                  disabled={!editData.title.trim() || saveLoading}
+                  startIcon={saveLoading ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
                 >
-                  {page.title}
-                </Typography>
+                  {saveLoading ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleCancelEdit}
+                  disabled={saveLoading}
+                >
+                  Cancel
+                </Button>
               </>
             )}
           </Box>
-          
-          {!isEditing ? (
-            <Box>              <IconButton 
-                onClick={() => setIsEditing(true)}
-                sx={{ mr: 1 }}
-                title="Edit page"
-              >
-                <EditIcon />
-              </IconButton>
-              
-              <IconButton 
-                onClick={() => setDeleteDialogOpen(true)}
-                color="error"
-                title="Delete page"
-              >
-                <DeleteOutlineIcon />
-              </IconButton>
-            </Box>
-          ) : (
-            <Box>
-              <Button
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={saveLoading || !editData.title.trim()}
-                sx={{ mr: 1 }}
-              >
-                Save
-              </Button>
-              
-              <IconButton onClick={handleCancelEdit}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
+        </Box>        <Box sx={{ mt: 4 }}>
+          {editData.content && (
+            <PlannerContentEditor
+              key={`editor-${pageId}-${!!editData.content.editorState}`}
+              content={editData.content}
+              onChange={handleContentChange}
+              readOnly={!isEditing}
+              onSave={handleAutoSave}
+            />
           )}
         </Box>
-        
-        {/* Divider */}
-        <Box 
-          sx={{ 
-            height: 1,
-            bgcolor: theme.palette.divider,
-            mb: 3
-          }}
-        />
-        {/* Page content */}
-        <PlannerContentEditor
-          content={isEditing ? editData.content : page.content || []}
-          onChange={handleContentChange}
-          readOnly={!isEditing}
-          onSave={isEditing ? handleSave : null}
-        />
       </Paper>
 
-      {/* Child pages */}
-      {page.childPages && page.childPages.length > 0 && (
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-            Linked Pages
-          </Typography>
-          
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {page.childPages.map((childPage) => (
-              <Paper
-                key={childPage._id}
-                elevation={0}
-                sx={{
-                  p: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: '8px',
-                  width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' },
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.07)',
-                    borderColor: 'primary.main',
-                  },
-                }}
-                onClick={() => router.push(`/planner/${childPage._id}`)}
-              >
-                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                  {childPage.title}
-                </Typography>
-                
-                {childPage.description && (
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    sx={{ 
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {childPage.description}
-                  </Typography>
-                )}
-              </Paper>
-            ))}
-          </Box>
-        </Box>
-      )}
-      
       {/* Delete confirmation dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Page</DialogTitle>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Delete this page?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete <strong>{page.title}</strong>?
-            {page.childPages && page.childPages.length > 0 && (
-              <Box component="span" sx={{ display: 'block', mt: 1, color: 'error.main', fontWeight: 500 }}>
-                This will also delete {page.childPages.length} linked page(s).
-              </Box>
-            )}
+            Are you sure you want to delete "{page.title}"? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)} color="inherit">
+            Cancel
+          </Button>
           <Button onClick={handleDelete} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Save feedback snackbar */}
+      <Snackbar
+        open={saveFeedbackOpen}
+        autoHideDuration={2000}
+        onClose={() => setSaveFeedbackOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        TransitionComponent={Slide}
+      >
+        <Paper
+          sx={{
+            py: 0.75,
+            px: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            backgroundColor: alpha(theme.palette.success.main, 0.9),
+            color: 'white',
+            borderRadius: 2
+          }}
+        >
+          <CloudDoneIcon fontSize="small" />
+          <Typography variant="body2">Changes saved successfully</Typography>
+        </Paper>
+      </Snackbar>
     </Box>
   );
 };

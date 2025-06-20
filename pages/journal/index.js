@@ -207,8 +207,7 @@ const JournalPage = () => {
     if (isLoaded && user) {
       fetchMonthEntries(currentMonth);
     }
-  }, [currentMonth, isLoaded, user]);
-  // Handle date selection
+  }, [currentMonth, isLoaded, user]);  // Handle date selection
   const handleDateSelect = (date) => {
     const selectedDayjs = dayjs(date);
     setSelectedDate(selectedDayjs);
@@ -223,8 +222,13 @@ const JournalPage = () => {
     
     // If it's today or there's an existing entry
     if (isToday || (isPast && existingEntry)) {
-      setCurrentEntry(existingEntry || null);
-      setEditorOpen(true);
+      // Navigate to the journal entry page
+      if (existingEntry) {
+        router.push(`/journal/${existingEntry._id}`);
+      } else {
+        // Create a new entry for today
+        handleCreateTodaysEntry();
+      }
     }
   };
   
@@ -423,16 +427,66 @@ const JournalPage = () => {
     } catch (error) {
       console.error('Error updating mood:', error);
     }
-  };
-   // Create new journal entry for today or edit existing one
+  };  // Create new journal entry for today or edit existing one
   const handleCreateTodaysEntry = () => {
     const today = dayjs();
     const todayKey = today.format('YYYY-MM-DD');
     const todaysEntry = entriesByDate[todayKey];
     
-    setSelectedDate(today);
-    setCurrentEntry(todaysEntry || null); // Set existing entry if available, null for new
-    setEditorOpen(true);
+    if (todaysEntry) {
+      // Navigate to existing entry
+      router.push(`/journal/${todaysEntry._id}`);
+    } else {
+      // Create a new entry and then navigate to it
+      const newEntryData = {
+        entryDate: today.toISOString(),
+        title: '',
+        content: {
+          editorState: JSON.stringify({
+            root: {
+              children: [
+                {
+                  children: [],
+                  direction: null,
+                  format: "",
+                  indent: 0,
+                  type: "paragraph",
+                  version: 1
+                }
+              ],
+              direction: null,
+              format: "",
+              indent: 0,
+              type: "root",
+              version: 1
+            }
+          })
+        },
+        mood: { score: 5, label: 'neutral' }
+      };
+      
+      fetch('/api/journal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newEntryData)
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to create journal entry');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Navigate to the new entry
+          router.push(`/journal/${data._id}`);
+        })
+        .catch(error => {
+          console.error('Error creating journal entry:', error);
+          setError('Failed to create journal entry');
+        });
+    }
   };
   
   // Handle opening the suggestions dialog
@@ -624,36 +678,7 @@ const JournalPage = () => {
               </Button>
             </Box>
           </Paper>
-        </Box>
-        {/* Journal Entry Editor Dialog */}
-        <Dialog
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          fullWidth
-          fullScreen
-          PaperProps={{
-            elevation: 3,
-            sx: {
-              borderRadius: { xs: 0, sm: 2 },
-              maxHeight: '85vh',
-              maxWidth: '95vw',
-              margin: { xs: '16px auto', sm: '16px auto' },
-              height: 'calc(100% - 128px)',
-              position: 'absolute',
-              top: 0
-            }
-          }}
-        >
-          <DialogContent sx={{ p: { xs: 1, sm: 3 } }}>
-            <JournalEditor
-              date={selectedDate}
-              entry={currentEntry}
-              onSave={handleSaveEntry}
-              onClose={() => setEditorOpen(false)}
-              onUpdateMood={handleUpdateMood}
-            />
-          </DialogContent>
-        </Dialog>
+        </Box>        {/* We've removed the dialog in favor of a dedicated journal entry page */}
         {/* Floating Action
       <Tooltip title="Write today's entry">
         <Fab 

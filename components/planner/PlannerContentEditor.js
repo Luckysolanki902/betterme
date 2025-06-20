@@ -1,60 +1,384 @@
 // components/planner/PlannerContentEditor.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
-  TextField,
-  Typography,
-  Button,
-  IconButton,
-  Menu,
-  MenuItem,
-  Tooltip,
-  Divider,
-  Paper,
-  useTheme,
-  alpha,
   CircularProgress,
-  Alert,
   Fab,
+  useTheme,
+  Alert,
+  Collapse,
+  Tooltip,
+  Typography,
+  Chip,
+  Paper,
+  Snackbar,
+  IconButton,
+  Button
 } from '@mui/material';
-import TitleIcon from '@mui/icons-material/Title';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import TextFieldsIcon from '@mui/icons-material/TextFields';
-import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import SaveIcon from '@mui/icons-material/Save';
-import { useRouter } from 'next/router';
-import styles from './PlannerStyles.module.css';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import WarningIcon from '@mui/icons-material/Warning';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import CloseIcon from '@mui/icons-material/Close';
+import ReplayIcon from '@mui/icons-material/Replay';
+import dynamic from 'next/dynamic';
+import { processEditorContent, isLikelyEncrypted, createEmptyDocument, validateLexicalState, isValidJSON } from '@/utils/plannerUtils';
+import { alpha } from '@mui/material/styles';
+import { format } from 'date-fns';
+
+// Try to load editors with multiple fallbacks - Using the new LexicalRichTextEditorNew first 
+// which is the full-featured one with true rich text formatting (headings, bullets, etc.)
+const RichTextEditor = dynamic(() => 
+  import('../lexical/LexicalRichTextEditorNew')
+  .catch((error) => {
+    console.warn('Failed to load LexicalRichTextEditorNew, falling back to BasicLexicalEditor', error);
+    return import('../lexical/BasicLexicalEditor')
+    .catch((error) => {
+      console.warn('Failed to load BasicLexicalEditor, falling back to ContentEditableEditor', error);
+      return import('../lexical/ContentEditableEditor')
+      .catch((error) => {
+        console.warn('Failed to load ContentEditableEditor, falling back to RichTextEditor', error);
+        return import('../lexical/RichTextEditor')
+          .catch((error) => {
+            console.warn('Failed to load RichTextEditor, falling back to BasicTextEditor', error);
+            return import('../lexical/BasicTextEditor')
+              .catch((error) => {
+                console.error('All editor fallbacks failed', error);
+                // Return a basic component that at least shows an error message
+                return () => (
+                  <Box sx={{ p: 2, border: '1px solid red', borderRadius: 1 }}>
+                    <Typography color="error">
+                      Editor failed to load. Please try refreshing the page.
+                    </Typography>
+                  </Box>
+                );
+              });
+          });
+      });
+    });
+  }), 
+  { 
+    ssr: false,
+    loading: () => <Box sx={{ 
+      height: 400, 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center', 
+      justifyContent: 'center' 
+    }}>
+      <CircularProgress size={40} />
+      <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+        Loading editor...
+      </Typography>
+    </Box>
+  }
+);
 
 const PlannerContentEditor = ({ 
-  content = [], 
+  content = {}, 
   onChange, 
   readOnly = false,
   onSave
 }) => {
-  const [blocks, setBlocks] = useState(content);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [addBlockIndex, setAddBlockIndex] = useState(null);
-  const [draggedBlockIndex, setDraggedBlockIndex] = useState(null);
-  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const [editorContent, setEditorContent] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const dragSourceRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showEncryptionAlert, setShowEncryptionAlert] = useState(false);
+  const [editorLoadError, setEditorLoadError] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [wordCount, setWordCount] = useState(0);
+  const [editorType, setEditorType] = useState('loading');
+  const [saveStatus, setSaveStatus] = useState(null); // 'success', 'error', 'saving'
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [saveError, setSaveError] = useState(null);
   const theme = useTheme();
-  // Update blocks when content prop changes
+  const contentRef = useRef(content);
+  const saveTimerRef = useRef(null);
+  const lastSaveAttemptRef = useRef(null);
+  const saveRetryTimeoutRef = useRef(null);
+  const lastValidContentRef = useRef(null);
+  const initialContentProcessed = useRef(false);
+  // Process and update editor content when content prop changes
   useEffect(() => {
-    setBlocks(content);
+    contentRef.current = content;
+    
+    // Skip if we've already processed the initial content and there's no new content
+    if (initialContentProcessed.current && !content) return;
+    
+    try {
+      if (!content) {
+        console.log('No content provided, creating empty document');
+        setEditorContent(createEmptyDocument());
+        setWordCount(0);
+        initialContentProcessed.current = true;
+        return;
+      }
+      
+      console.log('Content received in editor:', 
+        content?.editorState ? 
+          (typeof content.editorState === 'string' ? 
+            content.editorState.substring(0, 30) + '...' : 
+            'non-string content') : 
+          'no editor state');
+
+      // Check if we're likely dealing with encrypted content
+      let isEncrypted = false;      if (content.editorState && typeof content.editorState === 'string') {
+        // First check if it's valid JSON
+        let isValidJson = false;
+        let isEncryptedContent = false;
+        let parsedContent = null;
+        
+        try {
+          parsedContent = JSON.parse(content.editorState);
+          isValidJson = true;
+          
+          // Check if this is our special marker for encrypted content
+          if (parsedContent.root && parsedContent.root.__encrypted === true) {
+            isEncryptedContent = true;
+            console.warn('Content marked as encrypted by processor');
+          }
+        } catch (e) {
+          isValidJson = false;
+        }
+
+        // If it's not valid JSON, check if it's encrypted 
+        if (!isValidJson) {
+          isEncryptedContent = isLikelyEncrypted(content.editorState);
+          if (isEncryptedContent) {
+            console.warn('Encrypted editor state detected in PlannerContentEditor');
+          }
+        }
+        
+        setShowEncryptionAlert(isEncryptedContent);
+      }
+      
+      // Process the content to ensure it's in the correct format
+      const processedContent = processEditorContent(content);
+        // Validate the processed content is a valid Lexical state
+      let isValidContent = false;
+      try {
+        isValidContent = isValidJSON(processedContent) && validateLexicalState(processedContent);
+      } catch (e) {
+        console.warn('Invalid editor state after processing:', e);
+        isValidContent = false;
+      }
+      
+      // Set the editor content if valid, otherwise use last valid content or empty document
+      if (isValidContent) {
+        console.log('Setting valid editor content');
+        setEditorContent(processedContent);
+        lastValidContentRef.current = processedContent;
+        
+        // If we're setting valid content, also clear any encryption alert
+        if (!showEncryptionAlert) {
+          setShowEncryptionAlert(false);
+        }
+      } else if (lastValidContentRef.current) {
+        console.warn('Using last valid content instead of invalid state');
+        setEditorContent(lastValidContentRef.current);
+      } else {
+        const emptyDoc = createEmptyDocument();
+        console.warn('Using empty document due to invalid content');
+        setEditorContent(emptyDoc);
+        lastValidContentRef.current = emptyDoc; // Store the empty doc as the last valid content
+      }
+      
+      // Try to calculate word count from processed content
+      try {
+        if (processedContent && isValidJSON(processedContent)) {
+          const contentObj = JSON.parse(processedContent);
+          let plainText = '';
+          
+          // Extract text from Lexical JSON structure
+          if (contentObj.root && Array.isArray(contentObj.root.children)) {
+            plainText = contentObj.root.children
+              .map(node => {
+                if (node.children) {
+                  return node.children
+                    .map(child => child.text || '')
+                    .join(' ');
+                }
+                return '';
+              })
+              .join(' ');
+          }
+          
+          // Count words (split by whitespace and filter out empty strings)
+          const count = plainText.split(/\s+/).filter(Boolean).length;
+          setWordCount(count);
+        } else {
+          setWordCount(0);
+        }
+      } catch (countError) {
+        console.warn('Error calculating word count:', countError);
+        setWordCount(0);
+      }
+      
+      // Mark that we've processed the initial content
+      initialContentProcessed.current = true;
+    } catch (error) {
+      console.error('Error processing editor content:', error);
+      
+      // Try to use last valid content if available
+      if (lastValidContentRef.current) {
+        setEditorContent(lastValidContentRef.current);
+      } else {
+        setEditorContent(createEmptyDocument());
+      }
+      
+      setWordCount(0);
+      setEditorLoadError('Failed to process editor content');
+      initialContentProcessed.current = true;
+    }
   }, [content]);
   
-  // Save handler
-  const handleTriggerSave = () => {
-    if (onSave && typeof onSave === 'function') {
-      onSave(blocks);
-      setHasChanges(false);
+  // Handle content change from editor
+  const handleEditorChange = useCallback((editorStateStr) => {
+    // Make sure we got a valid editor state
+    if (!editorStateStr) {
+      console.warn('Received empty editor state from editor component');
+      return;
     }
-  };
+    
+    // Validate it's proper JSON before setting it
+    try {
+      if (!isValidJSON(editorStateStr)) {
+        console.warn('Received invalid JSON from editor component');
+        return;
+      }
+      
+      // Store this as the last valid content
+      lastValidContentRef.current = editorStateStr;
+    } catch (e) {
+      console.warn('Error validating editor state:', e);
+      return;
+    }
+    
+    setEditorContent(editorStateStr);
+    setHasChanges(true);
+    
+    // Update word count when content changes
+    try {
+      if (editorStateStr) {
+        const contentObj = JSON.parse(editorStateStr);
+        let plainText = '';
+        
+        // Extract text from Lexical JSON structure
+        if (contentObj.root && Array.isArray(contentObj.root.children)) {
+          plainText = contentObj.root.children
+            .map(node => {
+              if (node.children) {
+                return node.children
+                  .map(child => child.text || '')
+                  .join(' ');
+              }
+              return '';
+            })
+            .join(' ');
+        }
+        
+        // Count words
+        const count = plainText.split(/\s+/).filter(Boolean).length;
+        setWordCount(count);
+      } else {
+        setWordCount(0);
+      }
+    } catch (error) {
+      console.warn('Error calculating word count on change:', error);
+    }
+    
+    // Notify parent component of changes
+    if (onChange) {
+      onChange({ editorState: editorStateStr });
+    }
+    
+    // Set up auto-save if enabled
+    if (autoSaveEnabled) {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = setTimeout(() => {
+        handleTriggerSave();
+      }, 3000); // Auto-save after 3 seconds of inactivity
+    }
+  }, [onChange, autoSaveEnabled]);
+    // Save handler
+  const handleTriggerSave = useCallback(async () => {
+    if (onSave && typeof onSave === 'function' && hasChanges) {
+      setIsSaving(true);
+      setSaveStatus('saving');
+      lastSaveAttemptRef.current = Date.now();
+      
+      try {
+        // Make sure we have a valid editor state
+        if (!editorContent || !isValidJSON(editorContent)) {
+          throw new Error('Cannot save invalid editor state');
+        }
+        
+        // Attempt to validate the state before saving
+        try {
+          validateLexicalState(editorContent);
+          
+          // Check if content is marked as encrypted
+          const parsedContent = JSON.parse(editorContent);
+          if (parsedContent.root && parsedContent.root.__encrypted === true) {
+            console.warn('Attempting to save content marked as encrypted, creating new document');
+            const emptyDoc = createEmptyDocument();
+            await onSave({ editorState: emptyDoc });
+            setEditorContent(emptyDoc);
+            lastValidContentRef.current = emptyDoc;
+            throw new Error('Cannot save encrypted content, created new document');
+          }
+        } catch (validationError) {
+          console.warn('Validation error before saving:', validationError);
+          // Fall back to the last valid content if available
+          if (lastValidContentRef.current) {
+            console.log('Using last valid content for save');
+            await onSave({ editorState: lastValidContentRef.current });
+          } else {
+            const emptyDoc = createEmptyDocument();
+            await onSave({ editorState: emptyDoc });
+            setEditorContent(emptyDoc);
+            lastValidContentRef.current = emptyDoc;
+            throw new Error('No valid editor state available, created new document');
+          }
+        }
+        
+        // Hide encryption alert if we're saving valid content
+        setShowEncryptionAlert(false);
+        
+        await onSave({ editorState: editorContent });
+        setHasChanges(false);
+        setSaveStatus('success');
+        setLastSaved(new Date());
+        setSaveError(null);
+        
+        // Show success status for 3 seconds, then hide
+        setTimeout(() => {
+          if (Date.now() - lastSaveAttemptRef.current >= 2900) {
+            setSaveStatus(null);
+          }
+        }, 3000);
+      } catch (error) {
+        console.error('Error saving content:', error);
+        setSaveStatus('error');
+        setSaveError(`Failed to save: ${error.message || 'Unknown error'}`);
+        
+        // Set up retry auto-save after 30 seconds if auto-save is enabled
+        if (autoSaveEnabled) {
+          if (saveRetryTimeoutRef.current) {
+            clearTimeout(saveRetryTimeoutRef.current);
+          }
+          saveRetryTimeoutRef.current = setTimeout(() => {
+            if (hasChanges) handleTriggerSave();
+          }, 30000);
+        }
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  }, [onSave, editorContent, hasChanges, autoSaveEnabled]);
   
   // Add keyboard shortcut for saving (Ctrl+S)
   useEffect(() => {
@@ -66,967 +390,276 @@ const PlannerContentEditor = ({
         }
       }
     };
-      document.addEventListener('keydown', handleKeyDown);
+    
+    document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [readOnly, hasChanges, onSave, blocks]);
-    
-  // Update parent component when blocks change
+  }, [readOnly, hasChanges, handleTriggerSave]);
+  
+  // Clear timers on unmount
   useEffect(() => {
-    if (onChange && !readOnly) {
-      onChange(blocks);
-      setHasChanges(true);
-    }
-  }, [blocks, onChange, readOnly]);
-  
-  // Drag and drop handlers
-  const handleDragStart = (e, index) => {
-    setDraggedBlockIndex(index);
-    e.currentTarget.classList.add(styles.draggingBlock);
-    // Store reference to the dragged element
-    dragSourceRef.current = e.currentTarget;
-    
-    // Set drag image to improve UX (optional)
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
-      try {
-        // Create a ghost image
-        const ghostElement = e.currentTarget.cloneNode(true);
-        ghostElement.style.position = 'absolute';
-        ghostElement.style.top = '-1000px';
-        document.body.appendChild(ghostElement);
-        e.dataTransfer.setDragImage(ghostElement, 20, 20);
-        
-        // Clean up the ghost element after a short delay
-        setTimeout(() => {
-          document.body.removeChild(ghostElement);
-        }, 100);
-      } catch (err) {
-        console.error('Error setting drag image:', err);
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
       }
-    }
-  };
-  
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    if (draggedBlockIndex === null) return;
-    
-    // Update the drop target indicator
-    if (index !== dropTargetIndex) {
-      setDropTargetIndex(index);
-    }
-  };
-  
-  const handleDragEnd = (e) => {
-    if (dragSourceRef.current) {
-      dragSourceRef.current.classList.remove(styles.draggingBlock);
-    }
-    setDraggedBlockIndex(null);
-    setDropTargetIndex(null);
-  };
-  
-  const handleDrop = (e, index) => {
-    e.preventDefault();
-    
-    if (draggedBlockIndex === null || draggedBlockIndex === index) {
-      return;
-    }
-    
-    // Reorder the blocks
-    const newBlocks = [...blocks];
-    const [draggedBlock] = newBlocks.splice(draggedBlockIndex, 1);
-    newBlocks.splice(index > draggedBlockIndex ? index - 1 : index, 0, draggedBlock);
-    
-    setBlocks(newBlocks);
-    setDraggedBlockIndex(null);
-    setDropTargetIndex(null);
-  };
-  
-  const handleOpenMenu = (event, index) => {
-    setAnchorEl(event.currentTarget);
-    setAddBlockIndex(index);
-  };
-  
-  const handleCloseMenu = () => {
-    setAnchorEl(null);
-  };
-    const handleAddBlock = (type) => {
-    const index = addBlockIndex !== null ? addBlockIndex + 1 : blocks.length;
-    const newBlock = createNewBlock(type);
-    
-    const newBlocks = [...blocks];
-    newBlocks.splice(index, 0, newBlock);
-    
-    setBlocks(newBlocks);
-    handleCloseMenu();
-  };
-  
-  const handleUpdateBlock = (index, updatedBlock) => {
-    const newBlocks = [...blocks];
-    newBlocks[index] = updatedBlock;
-    setBlocks(newBlocks);
-  };
-  
-  const handleDeleteBlock = (index) => {
-    const newBlocks = blocks.filter((_, i) => i !== index);
-    setBlocks(newBlocks);
-  };
-  
-  const handleChangeBlockContent = (index, content) => {
-    const newBlocks = [...blocks];
-    newBlocks[index].content = content;
-    setBlocks(newBlocks);
-  };
-  
-  const handleChangeBlockType = (index, newType) => {
-    const newBlocks = [...blocks];
-    newBlocks[index] = {
-      ...newBlocks[index],
-      type: newType
+      if (saveRetryTimeoutRef.current) {
+        clearTimeout(saveRetryTimeoutRef.current);
+      }
     };
-    setBlocks(newBlocks);
-  };
-  
-  const handleChangeListItem = (blockIndex, itemIndex, content) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems[itemIndex].content = content;
-    setBlocks(newBlocks);
-  };
-  
-  const handleAddListItem = (blockIndex) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems.push({ content: '', subItems: [] });
-    setBlocks(newBlocks);
-  };
-  
-  const handleDeleteListItem = (blockIndex, itemIndex) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems = newBlocks[blockIndex].listItems.filter((_, i) => i !== itemIndex);
-    setBlocks(newBlocks);
-  };
-  
-  const handleAddSubItem = (blockIndex, itemIndex) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems[itemIndex].subItems.push({ content: '' });
-    setBlocks(newBlocks);
-  };
-  
-  const handleChangeSubItem = (blockIndex, itemIndex, subItemIndex, content) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems[itemIndex].subItems[subItemIndex].content = content;
-    setBlocks(newBlocks);
-  };
-  
-  const handleDeleteSubItem = (blockIndex, itemIndex, subItemIndex) => {
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex].listItems[itemIndex].subItems = 
-      newBlocks[blockIndex].listItems[itemIndex].subItems.filter((_, i) => i !== subItemIndex);
-    setBlocks(newBlocks);
-  };
-  
-  const createNewBlock = (type) => {
-    switch (type) {
-      case 'heading1':
-      case 'heading2':
-      case 'heading3':
-      case 'body1':
-      case 'body2':
-      case 'body3':
-        return { type, content: '' };
-      case 'bulletedList':
-      case 'numberedList':
-        return { type, listItems: [{ content: '', subItems: [] }] };
-      case 'embed':
-        return { 
-          type, 
-          embeddedPageId: null,
-          onUpdateBlock: handleUpdateBlock  // Pass the update callback
-        };
-      default:
-        return { type: 'body1', content: '' };
+  }, []);
+  // Handle refresh editor action - reset to a clean state
+  const handleRefreshEditor = useCallback(() => {
+    // Reset to a new empty document
+    const emptyDoc = createEmptyDocument();
+    setEditorContent(emptyDoc);
+    setShowEncryptionAlert(false);
+    setEditorLoadError(null);
+    setWordCount(0);
+    
+    // Mark that we have changes so it can be saved
+    setHasChanges(true);
+    
+    // Store this as the last valid content
+    lastValidContentRef.current = emptyDoc;
+    
+    // Set up auto-save if enabled
+    if (autoSaveEnabled) {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      saveTimerRef.current = setTimeout(() => {
+        handleTriggerSave();
+      }, 1000); // Auto-save quickly to overwrite the encrypted content
     }
-  };
-  
-  const renderBlock = (block, index) => {
-    switch (block.type) {
-      case 'heading1':
-        return (
-          <HeadingBlock 
-            key={index}
-            index={index}
-            block={block}
-            level={1}
-            readOnly={readOnly}
-            onChange={handleChangeBlockContent}
-            onDelete={handleDeleteBlock}
-            onTypeChange={handleChangeBlockType}
-          />
-        );
-      case 'heading2':
-        return (
-          <HeadingBlock 
-            key={index}
-            index={index}
-            block={block}
-            level={2}
-            readOnly={readOnly}
-            onChange={handleChangeBlockContent}
-            onDelete={handleDeleteBlock}
-            onTypeChange={handleChangeBlockType}
-          />
-        );
-      case 'heading3':
-        return (
-          <HeadingBlock 
-            key={index}
-            index={index}
-            block={block}
-            level={3}
-            readOnly={readOnly}
-            onChange={handleChangeBlockContent}
-            onDelete={handleDeleteBlock}
-            onTypeChange={handleChangeBlockType}
-          />
-        );
-      case 'body1':
-      case 'body2':
-      case 'body3':
-        return (
-          <BodyBlock 
-            key={index}
-            index={index}
-            block={block}
-            readOnly={readOnly}
-            onChange={handleChangeBlockContent}
-            onDelete={handleDeleteBlock}
-            onTypeChange={handleChangeBlockType}
-          />
-        );
-      case 'bulletedList':
-        return (
-          <ListBlock 
-            key={index}
-            index={index}
-            block={block}
-            type="bulleted"
-            readOnly={readOnly}
-            onChangeItem={handleChangeListItem}
-            onAddItem={handleAddListItem}
-            onDeleteItem={handleDeleteListItem}
-            onAddSubItem={handleAddSubItem}
-            onChangeSubItem={handleChangeSubItem}
-            onDeleteSubItem={handleDeleteSubItem}
-            onDelete={handleDeleteBlock}
-          />
-        );
-      case 'numberedList':
-        return (
-          <ListBlock 
-            key={index}
-            index={index}
-            block={block}
-            type="numbered"
-            readOnly={readOnly}
-            onChangeItem={handleChangeListItem}
-            onAddItem={handleAddListItem}
-            onDeleteItem={handleDeleteListItem}
-            onAddSubItem={handleAddSubItem}
-            onChangeSubItem={handleChangeSubItem}
-            onDeleteSubItem={handleDeleteSubItem}
-            onDelete={handleDeleteBlock}
-          />
-        );
-      case 'embed':
-        return (
-          <EmbedBlock 
-            key={index}
-            index={index}
-            block={block}
-            readOnly={readOnly}
-            onDelete={handleDeleteBlock}
-          />
-        );
-      default:
-        return null;
+  }, [autoSaveEnabled]);
+
+  // Get save status indicator
+  const getSaveStatusIndicator = () => {
+    if (saveStatus === 'success') {
+      return <CloudDoneIcon fontSize="small" sx={{ color: 'success.main' }} />;
+    } else if (saveStatus === 'error') {
+      return <CloudOffIcon fontSize="small" sx={{ color: 'error.main' }} />;
+    } else if (saveStatus === 'saving') {
+      return <AutorenewIcon fontSize="small" sx={{ color: 'info.main', animation: 'spin 1.5s linear infinite' }} />;
     }
+    return null;
   };
+
   return (
-    <Box sx={{ mb: 4, position: 'relative' }}>
-      {!readOnly && hasChanges && (
-        <Fab
-          className={styles.floatingSaveButton}
-          onClick={handleTriggerSave}
-          aria-label="save"
-        >
-          <SaveIcon />
-        </Fab>
-      )}
-      
-      {blocks.length > 0 ? (
-        blocks.map((block, index) => (
-          <Box key={index}>
-            <Box
-              className={styles.blockWrapper}
-              draggable={!readOnly}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              onDrop={(e) => handleDrop(e, index)}
-            >
-              {renderBlock(block, index)}
-            </Box>
-            
-            {dropTargetIndex === index && draggedBlockIndex !== null && (
-              <Box className={styles.dropIndicator} />
-            )}
-            
-            {!readOnly && (
-              <Box 
-                sx={{ 
-                  display: 'flex',
-                  justifyContent: 'center',
-                  my: 1,
-                  opacity: 0.3,
-                  transition: 'opacity 0.2s',
-                  '&:hover': {
-                    opacity: 1
-                  }
-                }}
+    <Box sx={{ 
+      position: 'relative',
+      minHeight: '300px',
+      mb: 6 
+    }}>      <Collapse in={showEncryptionAlert}>
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 2 }}
+          action={
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                color="primary" 
+                size="small" 
+                variant="contained"
+                startIcon={<ReplayIcon />} 
+                onClick={handleRefreshEditor}
               >
-                <IconButton 
-                  size="small"
-                  onClick={(e) => handleOpenMenu(e, index)}
-                  sx={{
-                    borderRadius: '6px',
-                    p: 0.5,
-                  }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            )}
-          </Box>
-        ))
-      ) : !readOnly ? (
-        <Box 
-          sx={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: 120,
-            border: `1px dashed ${theme.palette.divider}`,
-            borderRadius: '8px',
-            p: 3,
-            textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: alpha(theme.palette.background.paper, 0.5),
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              backgroundColor: alpha(theme.palette.primary.main, 0.03),
-              borderColor: alpha(theme.palette.primary.main, 0.3),
-            }
-          }}
-          onClick={(e) => handleOpenMenu(e, -1)}
-        >
-          <Typography color="text.secondary">
-            Click to add content
-          </Typography>
-        </Box>
-      ) : (
-        <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-          No content
-        </Typography>
-      )}
-            
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <MenuItem onClick={() => handleAddBlock('heading1')}>
-          <TitleIcon fontSize="small" sx={{ mr: 1 }} /> Heading 1
-        </MenuItem>
-        <MenuItem onClick={() => handleAddBlock('heading2')}>
-          <TitleIcon fontSize="small" sx={{ mr: 1, transform: 'scale(0.85)' }} /> Heading 2
-        </MenuItem>
-        <MenuItem onClick={() => handleAddBlock('heading3')}>
-          <TitleIcon fontSize="small" sx={{ mr: 1, transform: 'scale(0.75)' }} /> Heading 3
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => handleAddBlock('body1')}>
-          <TextFieldsIcon fontSize="small" sx={{ mr: 1 }} /> Body text
-        </MenuItem>
-        <MenuItem onClick={() => handleAddBlock('bulletedList')}>
-          <FormatListBulletedIcon fontSize="small" sx={{ mr: 1 }} /> Bulleted list
-        </MenuItem>
-        <MenuItem onClick={() => handleAddBlock('numberedList')}>
-          <FormatListNumberedIcon fontSize="small" sx={{ mr: 1 }} /> Numbered list
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => handleAddBlock('embed')}>
-          <InsertDriveFileOutlinedIcon fontSize="small" sx={{ mr: 1 }} /> Embed page
-        </MenuItem>
-      </Menu>
-    </Box>
-  );
-};
-
-// Heading Block Component
-const HeadingBlock = ({ index, block, level, readOnly, onChange, onDelete, onTypeChange }) => {
-  const variant = `h${level + 1}`;
-  const fontWeight = level === 1 ? 700 : level === 2 ? 600 : 500;
-  
-  return (
-    <Box 
-      sx={{ 
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-start',
-        py: 1,
-        '&:hover .block-controls': {
-          opacity: 1
-        }
-      }}
-    >
-      {!readOnly && (
-        <Box 
-          className="block-controls"
-          sx={{
-            position: 'absolute',
-            left: -35,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            opacity: 0,
-            transition: 'opacity 0.2s'
-          }}
-        >
-          <Tooltip title="Drag to reorder">
-            <DragIndicatorIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-          </Tooltip>
-        </Box>
-      )}
-      
-      <Box sx={{ width: '100%' }}>
-        {readOnly ? (
-          <Typography variant={variant} gutterBottom sx={{ fontWeight, mt: level === 1 ? 2 : 1 }}>
-            {block.content}
-          </Typography>
-        ) : (
-          <TextField
-            fullWidth
-            variant="outlined"
-            value={block.content}
-            onChange={(e) => onChange(index, e.target.value)}
-            placeholder={`Heading ${level}`}
-            InputProps={{
-              sx: {
-                fontSize: level === 1 ? '1.5rem' : level === 2 ? '1.25rem' : '1.15rem',
-                fontWeight,
-                py: 0.5
-              }
-            }}
-            sx={{
-              '.MuiOutlinedInput-notchedOutline': {
-                border: 'none'
-              },
-
-            }}
-          />
-        )}
-      </Box>
-      
-      {!readOnly && (
-        <Box sx={{ ml: 1, mt: 1, opacity: 0.5 }}>
-          <Tooltip title="Delete block">
-            <IconButton size="small" onClick={() => onDelete(index)}>
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-// Body Block Component
-const BodyBlock = ({ index, block, readOnly, onChange, onDelete, onTypeChange }) => {
-  return (
-    <Box 
-      sx={{ 
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-start',
-        py: 1,
-        '&:hover .block-controls': {
-          opacity: 1
-        }
-      }}
-    >
-      {!readOnly && (
-        <Box 
-          className="block-controls"
-          sx={{
-            position: 'absolute',
-            left: -35,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            opacity: 0,
-            transition: 'opacity 0.2s'
-          }}
-        >
-          <Tooltip title="Drag to reorder">
-            <DragIndicatorIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-          </Tooltip>
-        </Box>
-      )}
-      
-      <Box sx={{ width: '100%' }}>
-        {readOnly ? (
-          <Typography variant="body1" paragraph>
-            {block.content}
-          </Typography>
-        ) : (
-          <TextField
-            fullWidth
-            multiline
-            variant="outlined"
-            value={block.content}
-            onChange={(e) => onChange(index, e.target.value)}
-            placeholder="Type something..."
-            minRows={1}
-            sx={{
-              '.MuiOutlinedInput-notchedOutline': {
-                border: 'none'
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                border: '1px dashed #ccc'
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                border: `1px solid #ccc`
-              }
-            }}
-          />
-        )}
-      </Box>
-      
-      {!readOnly && (
-        <Box sx={{ ml: 1, opacity: 0.5 }}>
-          <Tooltip title="Delete block">
-            <IconButton size="small" onClick={() => onDelete(index)}>
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )}
-    </Box>
-  );
-};
-
-// List Block Component
-const ListBlock = ({ 
-  index: blockIndex, 
-  block, 
-  type, 
-  readOnly, 
-  onChangeItem, 
-  onAddItem, 
-  onDeleteItem,
-  onAddSubItem,
-  onChangeSubItem,
-  onDeleteSubItem,
-  onDelete 
-}) => {
-  const theme = useTheme();
-  
-  return (
-    <Box 
-      sx={{ 
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-start',
-        py: 1,
-        '&:hover .block-controls': {
-          opacity: 1
-        }
-      }}
-    >
-      {!readOnly && (
-        <Box 
-          className="block-controls"
-          sx={{
-            position: 'absolute',
-            left: -35,
-            top: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            opacity: 0,
-            transition: 'opacity 0.2s'
-          }}
-        >
-          <Tooltip title="Drag to reorder">
-            <DragIndicatorIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-          </Tooltip>
-        </Box>
-      )}
-      
-      <Box sx={{ width: '100%' }}>
-        <Box component={type === 'numbered' ? 'ol' : 'ul'} sx={{ pl: 2, m: 0 }}>
-          {block.listItems.map((item, itemIndex) => (
-            <Box key={itemIndex} sx={{ mb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                <Box 
-                  component="li" 
-                  sx={{ 
-                    mr: 1,
-                    width: '100%',
-                    listStyleType: type === 'numbered' ? 'decimal' : 'disc',
-                  }}
-                >
-                  {readOnly ? (
-                    <Typography>{item.content}</Typography>
-                  ) : (                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      value={item.content}
-                      onChange={(e) => onChangeItem(blockIndex, itemIndex, e.target.value)}
-                      placeholder="List item"
-                      size="small"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          onAddItem(blockIndex);
-                        }
-                      }}
-                      sx={{
-                        '.MuiOutlinedInput-notchedOutline': {
-                          border: 'none'
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          border: '1px dashed #ccc'
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          border: `1px solid #ccc`
-                        }
-                      }}
-                    />
-                  )}
-                </Box>
-                
-                {!readOnly && (
-                  <Box sx={{ display: 'flex', mt: 1 }}>
-                    <Tooltip title="Add sub-item">
-                      <IconButton size="small" onClick={() => onAddSubItem(blockIndex, itemIndex)}>
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete item">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => onDeleteItem(blockIndex, itemIndex)}
-                        disabled={block.listItems.length === 1}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                )}
-              </Box>
-              
-              {/* Sub-items */}
-              {item.subItems && item.subItems.length > 0 && (
-                <Box component={type === 'numbered' ? 'ol' : 'ul'} sx={{ pl: 4, mt: 1, mb: 0 }}>
-                  {item.subItems.map((subItem, subIndex) => (
-                    <Box 
-                      key={subIndex} 
-                      component="li" 
-                      sx={{ 
-                        mb: 1,
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        listStyleType: type === 'numbered' ? 'decimal' : 'circle',
-                      }}
-                    >
-                      {readOnly ? (
-                        <Typography>{subItem.content}</Typography>
-                      ) : (                        <TextField
-                          fullWidth
-                          variant="outlined"
-                          value={subItem.content}
-                          onChange={(e) => onChangeSubItem(blockIndex, itemIndex, subIndex, e.target.value)}
-                          placeholder="Sub-item"
-                          size="small"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              onAddSubItem(blockIndex, itemIndex);
-                            }
-                          }}
-                          sx={{
-                            '.MuiOutlinedInput-notchedOutline': {
-                              border: 'none'
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                              border: '1px dashed #ccc'
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              border: `1px solid #ccc`
-                            }
-                          }}
-                        />
-                      )}
-                      
-                      {!readOnly && (
-                        <IconButton 
-                          size="small" 
-                          onClick={() => onDeleteSubItem(blockIndex, itemIndex, subIndex)}
-                          sx={{ ml: 1, mt: 0.5 }}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
+                Reset Editor
+              </Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => window.location.reload()}
+              >
+                Refresh Page
+              </Button>
             </Box>
-          ))}
-        </Box>
-        
-        {!readOnly && (
-          <Box sx={{ ml: 3, mt: 1 }}>
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => onAddItem(blockIndex)}
-              sx={{ textTransform: 'none' }}
+          }
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Content appears to be encrypted
+          </Typography>
+          <Typography variant="body2">
+            There was an issue decrypting your content. <strong>Click "Reset Editor"</strong> to create a new document 
+            (this will overwrite the encrypted content) or refresh the page to try again.
+          </Typography>
+        </Alert>
+      </Collapse>
+      
+      {editorLoadError && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 2 }} 
+          onClose={() => setEditorLoadError(null)}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              startIcon={<ReplayIcon />} 
+              onClick={handleRefreshEditor}
             >
-              Add item
+              Reset Editor
             </Button>
+          }
+        >
+          {editorLoadError}
+        </Alert>
+      )}
+        <Box sx={{
+        borderRadius: 1,
+        border: `1px solid ${theme.palette.divider}`,
+        p: { xs: 1, sm: 2 },
+        backgroundColor: theme.palette.background.paper,
+        minHeight: '300px',
+        position: 'relative',
+      }}>
+        {editorContent ? (
+          <RichTextEditor
+            key={`editor-${editorContent ? 'loaded' : 'empty'}`}
+            initialState={editorContent}
+            onChange={handleEditorChange}
+            readOnly={readOnly === true}
+            height="400px"
+            placeholder="Start writing your plan here..."
+            showToolbar={true}
+            autoFocus={!readOnly}
+          />
+        ) : (
+          <Box sx={{ 
+            height: 400, 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}>
+            <CircularProgress size={40} />
+            <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+              Loading editor...
+            </Typography>
           </Box>
         )}
       </Box>
-      
-      {!readOnly && (
-        <Box sx={{ ml: 1, opacity: 0.5 }}>
-          <Tooltip title="Delete list">
-            <IconButton size="small" onClick={() => onDelete(blockIndex)}>
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      )}
-    </Box>
-  );
-};
 
-// Embed Block Component
-const EmbedBlock = ({ index, block, readOnly, onDelete }) => {
-  const theme = useTheme();
-  const router = useRouter();
-  const [isCreating, setIsCreating] = useState(false);
-  const [newPageTitle, setNewPageTitle] = useState('');
-  const [error, setError] = useState('');
-  const [embeddedPage, setEmbeddedPage] = useState(null);
-
-  // Fetch embedded page info if ID exists
-  useEffect(() => {
-    const fetchEmbeddedPage = async () => {
-      if (!block.embeddedPageId) return;
-      
-      try {
-        const res = await fetch(`/api/planner/${block.embeddedPageId}`);
-        if (res.ok) {
-          const pageData = await res.json();
-          setEmbeddedPage(pageData);
-        }
-      } catch (err) {
-        console.error('Error fetching embedded page:', err);
-      }
-    };
-    
-    fetchEmbeddedPage();
-  }, [block.embeddedPageId]);
-
-  // Create a new embedded page
-  const handleCreateEmbeddedPage = async () => {
-    if (!newPageTitle.trim()) {
-      setError('Please enter a page title');
-      return;
-    }
-    
-    setIsCreating(true);
-    setError('');
-    
-    try {
-      // Get the current page ID from URL
-      const currentPath = router.asPath;
-      const currentPageId = currentPath.split('/planner/')[1];
-      
-      // Create new page as a child of current page with "embedded" flag
-      const res = await fetch('/api/planner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title: newPageTitle,
-          parentId: currentPageId,
-          isEmbedded: true,
-          content: [{ type: 'body1', content: 'Write something here...' }]
-        }),
-      });
-      
-      if (!res.ok) {
-        throw new Error('Failed to create embedded page');
-      }
-      
-      const newPage = await res.json();
-      
-      // Update the block with the new page ID
-      const newBlock = { ...block, embeddedPageId: newPage._id };
-      
-      // Call a callback to update this block in parent
-      if (typeof block.onUpdateBlock === 'function') {
-        block.onUpdateBlock(index, newBlock);
-      }
-      
-      setEmbeddedPage(newPage);
-      setNewPageTitle('');
-      setIsCreating(false);
-    } catch (err) {
-      console.error('Error creating embedded page:', err);
-      setError('Failed to create embedded page');
-      setIsCreating(false);
-    }
-  };
-
-  // Navigate to the embedded page
-  const handleOpenEmbeddedPage = () => {
-    if (block.embeddedPageId) {
-      router.push(`/planner/${block.embeddedPageId}`);
-    }
-  };
-  
-  return (
-    <Box 
-      sx={{ 
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'flex-start',
-        py: 1,
-        '&:hover .block-controls': {
-          opacity: 1
-        }
-      }}
-    >
-      {!readOnly && (
-        <Box 
-          className="block-controls"
-          sx={{
-            position: 'absolute',
-            left: -35,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            opacity: 0,
-            transition: 'opacity 0.2s'
-          }}
-        >
-          <Tooltip title="Drag to reorder">
-            <DragIndicatorIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-          </Tooltip>
-        </Box>
-      )}
-      
+      {/* Status Bar */}
       <Paper
         elevation={0}
         sx={{
-          width: '100%',
-          p: 2,
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: '8px',
-          backgroundColor: alpha(theme.palette.background.paper, 0.05),
-          transition: 'all 0.2s ease',
-          '&:hover': embeddedPage ? {
-            borderColor: alpha(theme.palette.primary.main, 0.5),
-            transform: 'translateY(-2px)',
-            boxShadow: '0 4px 12px rgba(66, 99, 235, 0.1)',
-          } : {},
-          cursor: embeddedPage ? 'pointer' : 'default',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 1,
+          mt: 1,
+          borderRadius: 1,
+          backgroundColor: alpha(theme.palette.background.paper, 0.8),
+          borderTop: `1px solid ${theme.palette.divider}`,
+          fontSize: '0.875rem',
         }}
-        onClick={embeddedPage ? handleOpenEmbeddedPage : null}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <InsertDriveFileOutlinedIcon 
-            fontSize="small" 
-            sx={{ 
-              mr: 1, 
-              color: embeddedPage ? theme.palette.primary.main : 'text.secondary' 
-            }} 
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip
+            label={`${wordCount} words`}
+            size="small"
+            variant="outlined"
+            sx={{
+              height: 24,
+              fontSize: '0.75rem',
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              borderColor: alpha(theme.palette.primary.main, 0.3),
+            }}
           />
-          <Typography variant="subtitle2" sx={{ color: embeddedPage ? theme.palette.primary.main : 'inherit' }}>
-            {embeddedPage ? embeddedPage.title : 'Embedded Page'}
-          </Typography>
+          
+          {lastSaved && !hasChanges && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <CloudDoneIcon fontSize="inherit" sx={{ color: 'success.main' }} />
+              Saved at {format(lastSaved, 'HH:mm:ss')}
+            </Typography>
+          )}
         </Box>
         
-        {!embeddedPage && !readOnly && (
-          <Box sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Enter page title..."
-              value={newPageTitle}
-              onChange={(e) => setNewPageTitle(e.target.value)}
-              error={!!error}
-              helperText={error}
-              InputProps={{
-                sx: { borderRadius: '8px' }
-              }}
-              sx={{ mb: 2 }}
-            />
-            <Button 
-              variant="contained" 
-              size="small" 
-              disabled={isCreating || !newPageTitle.trim()}
-              onClick={handleCreateEmbeddedPage}
-              sx={{
-                textTransform: 'none',
-                borderRadius: '8px',
-                background: 'linear-gradient(to right, #4263EB, #9370DB)',
-              }}
-            >
-              {isCreating ? 'Creating...' : 'Create Embedded Page'}
-            </Button>
-          </Box>
-        )}
-        
-        {!embeddedPage && readOnly && (
-          <Typography color="text.secondary" variant="body2">
-            No embedded page
-          </Typography>
-        )}
-        
-        {embeddedPage && (
-          <Typography color="text.secondary" variant="body2">
-            Click to open embedded page
-          </Typography>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {saveStatus && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {getSaveStatusIndicator()}
+              <Typography variant="caption" color={
+                saveStatus === 'success' ? 'success.main' : 
+                saveStatus === 'error' ? 'error.main' : 
+                'info.main'
+              }>
+                {saveStatus === 'success' && 'Saved'}
+                {saveStatus === 'error' && 'Save failed'}
+                {saveStatus === 'saving' && 'Saving...'}
+              </Typography>
+            </Box>
+          )}
+          
+          {!readOnly && autoSaveEnabled && (
+            <Tooltip title="Auto-save enabled">
+              <Chip
+                label="Auto-save"
+                size="small"
+                color="secondary"
+                variant="outlined"
+                sx={{ height: 24, fontSize: '0.75rem' }}
+                onClick={() => setAutoSaveEnabled(false)}
+              />
+            </Tooltip>
+          )}
+          
+          {!readOnly && !autoSaveEnabled && (
+            <Tooltip title="Auto-save disabled">
+              <Chip
+                label="Auto-save off"
+                size="small"
+                color="default"
+                variant="outlined"
+                sx={{ height: 24, fontSize: '0.75rem' }}
+                onClick={() => setAutoSaveEnabled(true)}
+              />
+            </Tooltip>
+          )}
+        </Box>
       </Paper>
-      
-      {!readOnly && (
-        <Box sx={{ ml: 1, opacity: 0.5 }}>
-          <Tooltip title="Delete embed">
-            <IconButton size="small" onClick={() => onDelete(index)}>
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
+
+      {/* Save button for manual save */}
+      {!readOnly && hasChanges && !autoSaveEnabled && (
+        <Fab
+          color="primary"
+          size="medium"
+          onClick={handleTriggerSave}
+          disabled={isSaving}
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 2
+          }}
+        >
+          {isSaving ? <CircularProgress size={24} color="inherit" /> : <SaveIcon />}
+        </Fab>
       )}
+      
+      {/* Error Snackbar */}
+      <Snackbar
+        open={saveStatus === 'error' && Boolean(saveError)}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        message={saveError}
+        action={
+          <IconButton
+            size="small"
+            color="inherit"
+            onClick={() => setSaveError(null)}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+      />
+      
+      {/* Custom animation for rotating icon */}
+      <style jsx global>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </Box>
   );
 };

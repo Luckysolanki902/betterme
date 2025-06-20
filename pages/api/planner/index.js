@@ -4,6 +4,43 @@ import PlannerPage from '@/models/PlannerPage';
 import { getUserId } from '@/middleware/clerkAuth';
 import { encryptFields, decryptFields, ENCRYPTED_FIELDS } from '@/utils/encryption';
 
+// Helper function to count words in Lexical editorState
+function countWordsInLexicalContent(editorStateStr) {
+  try {
+    // Parse the Lexical editor state JSON
+    const editorState = JSON.parse(editorStateStr);
+    
+    // Recursively extract text from the editor state
+    function extractTextFromNode(node) {
+      let text = '';
+      
+      // Handle text nodes
+      if (node.type === 'text') {
+        return node.text || '';
+      }
+      
+      // Handle nodes with children (paragraphs, headings, lists, etc.)
+      if (node.children) {
+        node.children.forEach((childNode) => {
+          text += ' ' + extractTextFromNode(childNode);
+        });
+      }
+      
+      return text;
+    }
+    
+    // Extract text from the root node's children
+    const textContent = extractTextFromNode(editorState.root);
+    
+    // Count words (split by whitespace and filter out empty strings)
+    const words = textContent.trim().split(/\s+/).filter(Boolean);
+    return words.length;
+  } catch (error) {
+    console.error('Error counting words in Lexical content:', error);
+    return 0;
+  }
+}
+
 // API handler for /api/planner - Gets all root level pages or creates a new page
 const handler = async (req, res) => {
   switch (req.method) {    case 'GET':
@@ -44,20 +81,28 @@ const handler = async (req, res) => {
         if (!title) {
           return res.status(400).json({ error: 'Title is required' });
         }
-        
-        // For content, either use an empty array or ensure it's an array
-        let sanitizedContent = [];
-        if (Array.isArray(content)) {
-          sanitizedContent = content;
-        } else if (typeof content === 'string') {
-          try {
-            // Try to parse if it's a stringified array
-            sanitizedContent = JSON.parse(content);
-          } catch (e) {
-            console.warn('Could not parse content string:', e);
-            sanitizedContent = [];
-          }
-        }
+          // For content, use Lexical editor state structure
+        let sanitizedContent = {
+          editorState: content?.editorState || JSON.stringify({
+            root: {
+              children: [
+                {
+                  children: [],
+                  direction: null,
+                  format: "",
+                  indent: 0,
+                  type: "paragraph",
+                  version: 1
+                }
+              ],
+              direction: null,
+              format: "",
+              indent: 0,
+              type: "root",
+              version: 1
+            }
+          })
+        };
         
         // Create page data
         const pageData = {
@@ -69,57 +114,22 @@ const handler = async (req, res) => {
           content: sanitizedContent,
           position: 0
         };        // Encrypt only title and description, keep content as structured data
-        let encryptedPageData = encryptFields(pageData, ENCRYPTED_FIELDS.PLANNER, userId);
-        
-        // Handle content array separately - keep the structure and encrypt only text content within each block
-        if (Array.isArray(pageData.content) && pageData.content.length > 0) {
-          encryptedPageData.content = pageData.content.map(block => {
-            const encryptedBlock = { ...block };
-            
-            // Encrypt the content field in each block if it's a string
-            if (typeof encryptedBlock.content === 'string' && encryptedBlock.content.trim() !== '') {
-              try {
-                encryptedBlock.content = encryptFields({ text: encryptedBlock.content }, ['text'], userId).text;
-              } catch (err) {
-                console.error('Failed to encrypt block content:', err);
-                // Keep original content if encryption fails
-              }
-            }
-            
-            // Encrypt list items if present
-            if (Array.isArray(encryptedBlock.listItems) && encryptedBlock.listItems.length > 0) {
-              encryptedBlock.listItems = encryptedBlock.listItems.map(item => {
-                const encryptedItem = { ...item };
-                if (typeof encryptedItem.content === 'string' && encryptedItem.content.trim() !== '') {
-                  try {
-                    encryptedItem.content = encryptFields({ text: encryptedItem.content }, ['text'], userId).text;
-                  } catch (err) {
-                    console.error('Failed to encrypt list item content:', err);
-                  }
-                }
-                
-                // Encrypt sub-items if present
-                if (Array.isArray(encryptedItem.subItems) && encryptedItem.subItems.length > 0) {
-                  encryptedItem.subItems = encryptedItem.subItems.map(subItem => {
-                    const encryptedSubItem = { ...subItem };
-                    if (typeof encryptedSubItem.content === 'string' && encryptedSubItem.content.trim() !== '') {
-                      try {
-                        encryptedSubItem.content = encryptFields({ text: encryptedSubItem.content }, ['text'], userId).text;
-                      } catch (err) {
-                        console.error('Failed to encrypt sub-item content:', err);
-                      }
-                    }
-                    return encryptedSubItem;
-                  });
-                }
-                
-                return encryptedItem;
-              });
-            }
-            
-            return encryptedBlock;
-          });
-        }        // Create the new page with validation to ensure content is in the correct format
+        let encryptedPageData = encryptFields(pageData, ENCRYPTED_FIELDS.PLANNER, userId);        // Handle Lexical editor content - encrypt the entire editorState JSON string
+        if (pageData.content && pageData.content.editorState) {
+          try {
+            encryptedPageData.content = {
+              editorState: encryptFields(
+                { text: pageData.content.editorState }, 
+                ['text'], 
+                userId
+              ).text
+            };
+          } catch (err) {
+            console.error('Failed to encrypt editor content:', err);
+            // Keep original content if encryption fails
+            encryptedPageData.content = pageData.content;
+          }
+        }// Create the new page with validation to ensure content is in the correct format
         const newPage = new PlannerPage(encryptedPageData);
         const savedPage = await newPage.save();
         

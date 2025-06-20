@@ -4,6 +4,43 @@ import JournalEntry from '@/models/JournalEntry';
 import { getUserId } from '@/middleware/clerkAuth';
 import { encryptFields, decryptFields, ENCRYPTED_FIELDS } from '@/utils/encryption';
 
+// Helper function to count words in Lexical editorState
+function countWordsInLexicalContent(editorStateStr) {
+  try {
+    // Parse the Lexical editor state JSON
+    const editorState = JSON.parse(editorStateStr);
+    
+    // Recursively extract text from the editor state
+    function extractTextFromNode(node) {
+      let text = '';
+      
+      // Handle text nodes
+      if (node.type === 'text') {
+        return node.text || '';
+      }
+      
+      // Handle nodes with children (paragraphs, headings, lists, etc.)
+      if (node.children) {
+        node.children.forEach((childNode) => {
+          text += ' ' + extractTextFromNode(childNode);
+        });
+      }
+      
+      return text;
+    }
+    
+    // Extract text from the root node's children
+    const textContent = extractTextFromNode(editorState.root);
+    
+    // Count words (split by whitespace and filter out empty strings)
+    const words = textContent.trim().split(/\s+/).filter(Boolean);
+    return words.length;
+  } catch (error) {
+    console.error('Error counting words in Lexical content:', error);
+    return 0;
+  }
+}
+
 // API handler for /api/journal
 // Handles:
 // - GET: Fetches journal entries by date range or month
@@ -64,56 +101,35 @@ const handler = async (req, res) => {  // Get the user ID for encryption/decrypt
         .limit(parseInt(limit))
         .lean();        // Decrypt entries before returning
         const decryptedEntries = entries.map(entry => {
-          // First decrypt the basic fields
-          const decryptedEntry = decryptFields(entry, ENCRYPTED_FIELDS.JOURNAL, userId);
+          // First decrypt the basic fields like title
+          const decryptedEntry = decryptFields(entry, ['title'], userId);
           
-          // Manually decrypt content blocks
-          if (Array.isArray(decryptedEntry.content) && decryptedEntry.content.length > 0) {
-            decryptedEntry.content = decryptedEntry.content.map(block => {
-              const decryptedBlock = { ...block };
-              
-              // Decrypt content field in each block
-              if (typeof decryptedBlock.content === 'string' && decryptedBlock.content.trim() !== '') {
+          // Decrypt the Lexical editorState
+          if (entry.content && entry.content.editorState) {
+            try {
+              // Check if the content appears to be encrypted
+              if (typeof entry.content.editorState === 'string') {
                 try {
-                  // First check if the content appears to be encrypted
-                  if (decryptedBlock.content.match(/^[A-Za-z0-9+/=]+$/) && decryptedBlock.content.length > 20) {
-                    try {
-                      const decryptResult = decryptFields({ text: decryptedBlock.content }, ['text'], userId);
-                      if (decryptResult && decryptResult.text) {
-                        decryptedBlock.content = decryptResult.text;
-                      }
-                    } catch (err) {
-                      console.warn('Failed to decrypt block content, using as-is:', err);
-                      // Keep original content if decryption fails
-                    }
+                  const decryptResult = decryptFields(
+                    { text: entry.content.editorState },
+                    ['text'],
+                    userId
+                  );
+                  
+                  if (decryptResult && decryptResult.text) {
+                    decryptedEntry.content = { 
+                      editorState: decryptResult.text 
+                    };
                   }
                 } catch (err) {
-                  console.error('Error processing block content:', err);
-                }
-              }
-              
-              // Decrypt list items if present
-              if (Array.isArray(decryptedBlock.listItems) && decryptedBlock.listItems.length > 0) {
-                decryptedBlock.listItems = decryptedBlock.listItems.map(item => {
-                  const decryptedItem = { ...item };
-                  if (typeof decryptedItem.content === 'string' && decryptedItem.content.trim() !== '') {
-                    try {
-                      if (decryptedItem.content.match(/^[A-Za-z0-9+/=]+$/) && decryptedItem.content.length > 20) {
-                        const decryptResult = decryptFields({ text: decryptedItem.content }, ['text'], userId);
-                        if (decryptResult && decryptResult.text) {
-                          decryptedItem.content = decryptResult.text;
-                        }
-                      }
-                    } catch (err) {
-                      console.error('Failed to decrypt list item content:', err);
-                    }
-                  }
-                  return decryptedItem;
-                });
-              }
-              
-              return decryptedBlock;
-            });
+                  console.warn('Failed to decrypt Lexical content, using as-is:', err);
+                  // Keep original content if decryption fails
+                  decryptedEntry.content = entry.content;
+                }              }
+            } catch (err) {
+              console.error('Error processing Lexical content:', err);
+              decryptedEntry.content = entry.content;
+            }
           }
           
           // Manually decrypt tags
@@ -162,68 +178,65 @@ const handler = async (req, res) => {  // Get the user ID for encryption/decrypt
         
         if (existingEntry) {
           return res.status(409).json({ error: 'Journal entry already exists for this date' });
+        }        // Calculate word count for Lexical format
+        let wordCount = 0;
+        if (content && content.editorState) {
+          try {
+            // Calculate word count using the helper function
+            wordCount = countWordsInLexicalContent(content.editorState);
+          } catch (error) {
+            console.error('Error calculating word count:', error);
+            wordCount = 0;
+          }
         }
         
-        // Calculate word count
-        let wordCount = 0;
-        if (Array.isArray(content)) {
-          content.forEach(block => {
-            if (block.content) {
-              wordCount += block.content.trim().split(/\s+/).length;
-            }
-            if (Array.isArray(block.listItems)) {
-              block.listItems.forEach(item => {
-                if (item.content) {
-                  wordCount += item.content.trim().split(/\s+/).length;
-                }
-              });
-            }
-          });
-        }        // Create the new entry object
+        // Create the new entry object
         const newEntry = {
           entryDate: new Date(entryDate),
           title: title || '',
-          content: content || [],
+          content: {
+            editorState: content?.editorState || JSON.stringify({
+              root: {
+                children: [
+                  {
+                    children: [],
+                    direction: null,
+                    format: "",
+                    indent: 0,
+                    type: "paragraph",
+                    version: 1
+                  }
+                ],
+                direction: null,
+                format: "",
+                indent: 0,
+                type: "root",
+                version: 1
+              }
+            })
+          },
           mood: mood || { score: 5, label: 'neutral' },
           tags: tags || [],
           wordCount,
           userId
         };
           // Create the entry with title encrypted
-        const encryptedEntry = encryptFields(newEntry, ENCRYPTED_FIELDS.JOURNAL, userId);
-        
-        // Manually handle content array - encrypt content within each block
-        if (Array.isArray(encryptedEntry.content) && encryptedEntry.content.length > 0) {
-          encryptedEntry.content = encryptedEntry.content.map(block => {
-            const encryptedBlock = { ...block };
-            
-            // Encrypt the content field in each block if it's a string
-            if (typeof encryptedBlock.content === 'string' && encryptedBlock.content.trim() !== '') {
-              try {
-                encryptedBlock.content = encryptFields({ text: encryptedBlock.content }, ['text'], userId).text;
-              } catch (err) {
-                console.error('Failed to encrypt block content:', err);
-                // Keep original content if encryption fails
-              }
-            }
-            
-            // Encrypt list items if present
-            if (Array.isArray(encryptedBlock.listItems) && encryptedBlock.listItems.length > 0) {
-              encryptedBlock.listItems = encryptedBlock.listItems.map(item => {
-                const encryptedItem = { ...item };
-                if (typeof encryptedItem.content === 'string' && encryptedItem.content.trim() !== '') {
-                  try {
-                    encryptedItem.content = encryptFields({ text: encryptedItem.content }, ['text'], userId).text;
-                  } catch (err) {
-                    console.error('Failed to encrypt list item content:', err);
-                  }
-                }
-                return encryptedItem;
-              });
-            }
-            
-            return encryptedBlock;
-          });
+        const encryptedEntry = encryptFields(newEntry, ['title'], userId);
+          // Handle Lexical editor content - encrypt the entire editorState JSON string
+        if (newEntry.content && newEntry.content.editorState) {
+          try {
+            encryptedEntry.content = {
+              editorState: encryptFields(
+                { text: newEntry.content.editorState }, 
+                ['text'], 
+                userId
+              ).text
+            };
+          } catch (err) {
+            console.error('Failed to encrypt editor content:', err);
+            // Keep original content if encryption fails
+            encryptedEntry.content = newEntry.content;
+          }
         }
         
         // Manually handle tags - encrypt tag names

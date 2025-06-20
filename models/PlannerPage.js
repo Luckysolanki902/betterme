@@ -1,30 +1,15 @@
 // models/PlannerPage.js
 import mongoose from 'mongoose';
 
-// Define the block schema for content blocks (paragraphs, headings, lists, etc.)
-const ContentBlockSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['heading1', 'heading2', 'heading3', 'body1', 'body2', 'body3', 'bulletedList', 'numberedList', 'embed'],
-    required: true,
-  },
-  content: {
-    type: String,
-    default: '',
-  },
-  // For lists, we'll store an array of list items
-  listItems: [{
-    content: String,
-    subItems: [{
-      content: String,
-    }],
-  }],
-  // For embedded pages
-  embeddedPageId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'PlannerPage',
-  },
-}, { _id: true });
+// Define the schema for Lexical editor content
+// Lexical stores content as a JSON structure
+const LexicalContentSchema = new mongoose.Schema({
+  // The complete Lexical editor state as a JSON string
+  editorState: {
+    type: String, // JSON stringified Lexical editor state
+    default: '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
+  }
+}, { _id: false });
 
 // Define the planner page schema
 const PlannerPageSchema = new mongoose.Schema(
@@ -41,9 +26,8 @@ const PlannerPageSchema = new mongoose.Schema(
       ref: 'PlannerPage',
       default: null,
     },
-    isEmbedded: { type: Boolean, default: false }, // For pages embedded within other pages
-    snippet: { type: String, default: '' }, // Short preview of content for listings
-    content: [ContentBlockSchema],
+    isEmbedded: { type: Boolean, default: false }, // For pages embedded within other pages    snippet: { type: String, default: '' }, // Short preview of content for listings
+    content: LexicalContentSchema,
     // Keep track of child pages for quick access
     childPages: [{
       type: mongoose.Schema.Types.ObjectId,

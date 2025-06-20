@@ -12,17 +12,52 @@ const handler = async (req, res) => {  // Get the user ID for authentication
     return res.status(405).json({ error: 'Method not allowed' });
   }
   
-  try {
-    // Get the current journal content from the request body
-    const { prompt, currentContent = '', type = 'continue' } = req.body;
-      // Validate required fields
+  try {    // Get the current journal content from the request body
+    const { prompt, content = null, type = 'continue', count = 5 } = req.body;
+    
+    // Extract text from Lexical editor state if available
+    let currentContent = '';
+    if (content && content.editorState) {
+      try {
+        const editorState = JSON.parse(content.editorState);
+        
+        // Function to recursively extract text from nodes
+        const extractText = (node) => {
+          let text = '';
+          
+          // Handle text nodes
+          if (node.type === 'text') {
+            return node.text || '';
+          }
+          
+          // Handle nodes with children
+          if (node.children) {
+            node.children.forEach(child => {
+              text += ' ' + extractText(child);
+            });
+          }
+          
+          return text;
+        };
+        
+        if (editorState && editorState.root) {
+          currentContent = extractText(editorState.root).trim();
+        }
+      } catch (err) {
+        console.error('Error parsing Lexical editor state:', err);
+        // Continue with empty content
+      }
+    }
+    
+    // Validate required fields for continuation
     if (!currentContent && type === 'continue') {
-      return res.status(400).json({ 
-        error: 'Current content is required for continuing a journal entry',
+      return res.status(200).json({ 
         suggestions: [
           "What emotions were most present for you today?",
           "Describe a moment that challenged you and how you responded.", 
-          "What are you looking forward to tomorrow and why?"
+          "What are you looking forward to tomorrow and why?",
+          "What's something you're grateful for right now?",
+          "Write about a conversation that stuck with you today."
         ]
       });
     }

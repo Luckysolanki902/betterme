@@ -1,31 +1,15 @@
 // models/JournalEntry.js
 import mongoose from 'mongoose';
 
-// Define the content block schema for rich text content in journal entries
-const ContentBlockSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['paragraph', 'heading1', 'heading2', 'heading3', 'bulletList', 'numberedList', 'quote', 'code'],
-    required: true,
-  },
-  content: {
-    type: String,
-    default: '',
-  },
-  // For lists
-  listItems: [{
-    content: String,
-    checked: {
-      type: Boolean,
-      default: false
-    }
-  }],
-  // For any additional attributes (like image URLs, alignment, etc.)
-  attributes: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
+// Define the schema for Lexical editor content
+// Lexical stores content as a JSON structure
+const LexicalContentSchema = new mongoose.Schema({
+  // The complete Lexical editor state as a JSON string
+  editorState: {
+    type: String, // JSON stringified Lexical editor state
+    default: '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
   }
-}, { _id: true });
+}, { _id: false });
 
 // Define tags schema for categorizing journal entries
 const TagSchema = new mongoose.Schema({
@@ -52,9 +36,8 @@ const JournalEntrySchema = new mongoose.Schema(
     title: { 
       type: String, 
       default: '' 
-    },
-    // Rich text content blocks
-    content: [ContentBlockSchema],
+    },    // Lexical editor content
+    content: LexicalContentSchema,
     // Mood/emotion tracking (1-10 scale or specific emotion)
     mood: {
       score: {

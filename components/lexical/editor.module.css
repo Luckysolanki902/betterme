@@ -1,0 +1,216 @@
+.editor-container {
+  position: relative;
+  border-radius: 8px;
+  min-height: 300px;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.editor-shell {
+  border-radius: 8px;
+  position: relative;
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+.editor-input {
+  min-height: 250px;
+  resize: none;
+  font-size: 16px;
+  position: relative;
+  tab-size: 1;
+  outline: 0;
+  padding: 16px;
+  caret-color: rgb(5, 5, 5);
+}
+
+.editor-input:focus {
+  outline: none;
+}
+
+.editor-text-bold {
+  font-weight: bold;
+}
+
+.editor-text-italic {
+  font-style: italic;
+}
+
+.editor-text-underline {
+  text-decoration: underline;
+}
+
+.editor-text-strikethrough {
+  text-decoration: line-through;
+}
+
+.editor-text-underlineStrikethrough {
+  text-decoration: underline line-through;
+}
+
+.editor-text-code {
+  background-color: rgb(240, 242, 245);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.editor-link {
+  color: rgb(33, 111, 219);
+  text-decoration: none;
+}
+
+.editor-code {
+  background-color: rgb(244, 246, 250);
+  font-family: monospace;
+  font-size: 14px;
+  display: block;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.editor-paragraph {
+  margin: 0 0 16px 0;
+  position: relative;
+}
+
+.editor-list-ol {
+  padding: 0;
+  margin: 0 0 16px 16px;
+}
+
+.editor-list-ul {
+  padding: 0;
+  margin: 0 0 16px 16px;
+}
+
+.editor-listitem {
+  margin: 8px 0;
+}
+
+.editor-nested-listitem {
+  list-style-type: none;
+}
+
+/* Placeholder */
+.editor-placeholder {
+  color: #999;
+  overflow: hidden;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  user-select: none;
+  pointer-events: none;
+  font-style: italic;
+}
+
+/* Toolbar styles */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  background-color: #f9f9f9;
+  margin-bottom: 8px;
+}
+
+.toolbar button, .toolbar select {
+  border: 0;
+  background: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolbar button:hover, .toolbar select:hover {
+  background-color: rgba(0, 0, 0, 0.075);
+}
+
+.toolbar button.active {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.toolbar .separator {
+  width: 1px;
+  background-color: #eee;
+  height: 24px;
+  margin: 0 8px;
+}
+
+.toolbar-group {
+  display: flex;
+  margin-right: 12px;
+}
+
+/* Image styles */
+.editor-image {
+  cursor: default;
+  display: inline-block;
+  position: relative;
+  user-select: none;
+  max-width: 100%;
+  margin: 16px 0;
+}
+
+.editor-image img {
+  max-width: 100%;
+  cursor: default;
+}
+
+.editor-image.selected {
+  outline: 2px solid #1976d2;
+}
+
+.image-resizer {
+  width: 10px;
+  height: 10px;
+  position: absolute;
+  background-color: rgb(60, 132, 244);
+  border: 1px solid #fff;
+}
+
+.image-resizer.ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.image-resizer.nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.image-resizer.se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+.image-resizer.sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+.editor-image-caption {
+  display: block;
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px;
+}

@@ -50,33 +50,17 @@ function encryptJournalEntry(entry, userId) {
   
   // Create a deep copy to avoid modifying the original
   const encryptedEntry = { ...entry };
-  
-  // Encrypt the title directly
+    // Encrypt the title directly
   if (encryptedEntry.title) {
     encryptedEntry.title = encryptData(encryptedEntry.title, userId);
   }
   
-  // Special handling for content array - each block needs encryption
-  if (Array.isArray(encryptedEntry.content)) {
-    encryptedEntry.content = encryptedEntry.content.map(block => {
-      // Create a copy of the block
-      const encryptedBlock = { ...block };
-      
-      // Encrypt the block content
-      if (encryptedBlock.content) {
-        encryptedBlock.content = encryptData(encryptedBlock.content, userId);
-      }
-      
-      // Encrypt list items if they exist
-      if (Array.isArray(encryptedBlock.listItems)) {
-        encryptedBlock.listItems = encryptedBlock.listItems.map(item => ({
-          ...item,
-          content: item.content ? encryptData(item.content, userId) : item.content
-        }));
-      }
-      
-      return encryptedBlock;
-    });
+  // Handle Lexical editor content - encrypt the entire editorState JSON string
+  if (encryptedEntry.content && encryptedEntry.content.editorState) {
+    encryptedEntry.content = {
+      ...encryptedEntry.content,
+      editorState: encryptData(encryptedEntry.content.editorState, userId)
+    };
   }
   
   return encryptedEntry;
@@ -95,33 +79,17 @@ function decryptJournalEntry(entry, userId) {
   const entryObj = typeof entry.toObject === 'function' 
     ? entry.toObject() 
     : { ...(typeof entry === 'object' ? entry : {}) };
-  
-  // Decrypt the title
+    // Decrypt the title
   if (entryObj.title) {
     entryObj.title = decryptData(entryObj.title, userId);
   }
   
-  // Decrypt content blocks
-  if (Array.isArray(entryObj.content)) {
-    entryObj.content = entryObj.content.map(block => {
-      // Create a copy of the block
-      const decryptedBlock = { ...block };
-      
-      // Decrypt the block content
-      if (decryptedBlock.content) {
-        decryptedBlock.content = decryptData(decryptedBlock.content, userId);
-      }
-      
-      // Decrypt list items if they exist
-      if (Array.isArray(decryptedBlock.listItems)) {
-        decryptedBlock.listItems = decryptedBlock.listItems.map(item => ({
-          ...item,
-          content: item.content ? decryptData(item.content, userId) : item.content
-        }));
-      }
-      
-      return decryptedBlock;
-    });
+  // Decrypt Lexical editor content
+  if (entryObj.content && entryObj.content.editorState) {
+    entryObj.content = {
+      ...entryObj.content,
+      editorState: decryptData(entryObj.content.editorState, userId)
+    };
   }
   
   return entryObj;
