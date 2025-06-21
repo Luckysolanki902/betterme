@@ -723,7 +723,7 @@ const Settings = () => {
                 <Button 
                   variant="contained" 
                   color="primary" 
-                  onClick={handleOpenBugReport}
+                  onClick={()=> router.push('/bug-report')}
                   startIcon={<BugReportIcon />}
                   sx={{ minWidth: { xs: '100%', sm: 200 } }}
                 >
@@ -943,7 +943,7 @@ const Settings = () => {
         <DialogActions>
           <Button onClick={handleCloseBugReport}>Cancel</Button>
           <Button 
-            onClick={handleSubmitBugReport} 
+            onClick={()=>{router.push('/bug-report')}} 
             color="primary" 
             variant="contained"
             disabled={!bugDescription.trim()}

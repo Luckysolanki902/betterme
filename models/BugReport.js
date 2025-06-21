@@ -7,30 +7,10 @@ const BugReportSchema = new mongoose.Schema({
     required: true,
     default: 'bug'
   },
-  title: {
-    type: String,
-    required: true,
-    maxlength: 200,
-  },
   description: {
     type: String,
     required: true,
-    maxlength: 2000,
-  },
-  email: {
-    type: String,
-    maxlength: 255,
-    validate: {
-      validator: function(v) {
-        if (!v) return true; // Allow empty email
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-      },
-      message: 'Please enter a valid email address'
-    },
-  },
-  additionalInfo: {
-    type: String,
-    maxlength: 1000,
+    maxlength: 5000,
   },
   status: {
     type: String,
@@ -49,10 +29,6 @@ const BugReportSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  lastUpdated: {
-    type: Date,
-    default: Date.now,
-  },
 }, {
   timestamps: true,
   versionKey: false,
@@ -60,6 +36,5 @@ const BugReportSchema = new mongoose.Schema({
 
 // Index for efficient querying
 BugReportSchema.index({ type: 1, status: 1, submittedAt: -1 });
-BugReportSchema.index({ severity: 1, priority: 1 });
 
 export default mongoose.models.BugReport || mongoose.model('BugReport', BugReportSchema);

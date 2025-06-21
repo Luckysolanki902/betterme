@@ -250,23 +250,6 @@ export default function Layout({ children }) {
           </Box>
         </SignedOut>
           <SignedIn>
-          <Box sx={{ mt: 2, px: 1, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                borderWidth: 2,
-                '&:hover': { borderWidth: 2 }
-              }}
-              onClick={() => navigateTo('/settings')}
-              startIcon={<SettingsRoundedIcon />}
-            >
-              Account Settings
-            </Button>
-          </Box>
         </SignedIn>
       </List>
       
