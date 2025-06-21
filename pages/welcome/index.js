@@ -61,13 +61,7 @@ const testimonials = [
   }
 ];
 
-// Stats data
-const stats = [
-  { number: "50K+", label: "Active Users", icon: <AccountCircle /> },
-  { number: "1M+", label: "Journal Entries", icon: <Book /> },
-  { number: "95%", label: "Goal Achievement", icon: <EmojiEvents /> },
-  { number: "4.9★", label: "User Rating", icon: <Star /> }
-];
+
 
 // Feature highlights - comprehensive coverage
 const features = [
@@ -428,80 +422,6 @@ const WelcomePage = () => {
         </Grid>
       </Container>
 
-      {/* Stats Section */}
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <Typography
-            variant="h3"
-            align="center"
-            sx={{
-              fontWeight: 800,
-              mb: 6,
-              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            Trusted by Thousands of Growth-Minded Individuals
-          </Typography>
-          
-          <Grid container spacing={4}>
-            {stats.map((stat, index) => (
-              <Grid item xs={6} md={3} key={index}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <Paper
-                    elevation={8}
-                    sx={{
-                      p: 4,
-                      textAlign: 'center',
-                      borderRadius: 4,
-                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    <Box sx={{ color: theme.palette.primary.main, mb: 2 }}>
-                      {stat.icon}
-                    </Box>
-                    <Typography
-                      variant="h3"
-                      sx={{
-                        fontWeight: 900,
-                        mb: 1,
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      {stat.number}
-                    </Typography>
-                    <Typography
-                      variant="body1"
-                      sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}
-                    >
-                      {stat.label}
-                    </Typography>
-                  </Paper>
-                </motion.div>
-              </Grid>
-            ))}
-          </Grid>
-        </motion.div>
-      </Container>
 
       {/* Features Section */}
       <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }} id="features-section">
