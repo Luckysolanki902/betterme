@@ -1,0 +1,459 @@
+// SimpleJournalEditor.js.new - temporary file for fixing formatting issues
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Box,
+  Button,
+  IconButton,
+  TextField,
+  Typography,
+  Paper,
+  Tooltip,
+  CircularProgress,
+  Alert,
+  useTheme,
+  alpha,
+  useMediaQuery
+} from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import dayjs from 'dayjs';
+import MoodDisplay from './MoodDisplay';
+import { DEFAULT_MOOD } from '@/utils/moods';
+
+// Constants for timers
+const AUTOSAVE_DELAY = 30000; // 30 seconds
+const AUTO_SUGGESTION_DELAY = 30000; // 30 seconds
+const MOOD_UPDATE_DELAY = 30000; // 30 seconds
+
+const SimpleJournalEditor = ({ 
+  entry = null, 
+  onSave, 
+  onUpdateMood,
+  onClose,
+  date = dayjs().toDate() 
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Helper function to count words - defined early to avoid reference errors
+  const countWords = (text) => {
+    // Make sure text is a string and not null/undefined before using trim
+    if (!text || typeof text !== 'string') {
+      return 0;
+    }
+    // Count words (split by whitespace and filter out empty strings)
+    return text.trim().split(/\s+/).filter(Boolean).length;
+  };
+  
+  // Content state
+  const [content, setContent] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [mood, setMood] = useState(entry?.mood || DEFAULT_MOOD);
+  const [wordCount, setWordCount] = useState(0);
+  const [moodDetecting, setMoodDetecting] = useState(false);
+  
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  
+  // Timers
+  const autoSaveInterval = useRef(null);
+  const moodUpdateInterval = useRef(null);
+  const suggestionInterval = useRef(null);
+  const typingTimer = useRef(null);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+
+  // Update word count
+  const updateWordCount = useCallback((text) => {
+    const count = countWords(text);
+    setWordCount(count);
+    return count;
+  }, []);
+
+  // Initialize content from entry
+  useEffect(() => {
+    // Always initialize content as a string even if entry is null
+    const safeContent = (entry && typeof entry.content === 'string') ? entry.content : '';
+    setContent(safeContent);
+    updateWordCount(safeContent);
+  }, [entry, updateWordCount]);
+
+  // Handle text changes
+  const handleContentChange = (e) => {
+    const newContent = e.target.value;
+    // Ensure content is always a string
+    setContent(typeof newContent === 'string' ? newContent : '');
+    setHasChanges(true);
+    setIsUserTyping(true);
+    
+    // Reset typing timer
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => {
+      setIsUserTyping(false);
+      updateWordCount(newContent);
+    }, 1000);
+  };
+
+  // Handle save action
+  const handleSave = useCallback(async (isManualSave = false) => {
+    if (!hasChanges && !isManualSave) return;
+    
+    setIsSaving(true);
+    setError('');
+    
+    try {
+      // Ensure content is a string before saving
+      const safeContent = typeof content === 'string' ? content : '';
+      
+      // Count words directly to avoid dependencies
+      const finalWordCount = countWords(safeContent);
+      
+      const entryData = {
+        entryDate: date,
+        content: safeContent,
+        mood,
+        wordCount: finalWordCount,
+        forceMoodUpdate: isManualSave,
+      };
+      
+      await onSave(entryData);
+      setHasChanges(false);
+    } catch (err) {
+      console.error('Error saving journal entry:', err);
+      setError('Failed to save your entry. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [hasChanges, date, content, mood, onSave]);
+
+  // Update mood from content
+  const updateMoodFromContent = useCallback(async () => {
+    if (!content || typeof content !== 'string' || content.trim().length < 20 || isUserTyping) return;
+    
+    setMoodDetecting(true);
+    
+    try {
+      const response = await fetch('/api/journal/detect-mood', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.mood) {
+          // Update UI mood
+          setMood(data.mood);
+          
+          // Call parent callback to update mood
+          if (onUpdateMood) {
+            onUpdateMood(data.mood);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error detecting mood:", error);
+    } finally {
+      setMoodDetecting(false);
+    }
+  }, [content, isUserTyping, onUpdateMood]);
+  
+  // Fetch writing suggestions
+  const fetchSuggestions = useCallback(async () => {
+    if (!content || typeof content !== 'string' || content.trim().length < 10 || isUserTyping) return;
+    
+    setLoadingSuggestions(true);
+    
+    try {
+      const response = await fetch('/api/journal/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          content,
+          count: 5 
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.suggestions && data.suggestions.length > 0) {
+          setSuggestions(data.suggestions);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, [content, isUserTyping]);
+  
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suggestion) => {
+    setContent(prev => {
+      // Ensure prev is a string
+      const safeContent = typeof prev === 'string' ? prev : '';
+      // If the content ends with a space or is empty, we don't need to add a space
+      const needsSpace = safeContent.length > 0 && !safeContent.endsWith(' ');
+      return safeContent + (needsSpace ? ' ' : '') + suggestion;
+    });
+    
+    setHasChanges(true);
+    setSuggestionsOpen(false);
+  };
+  
+  // Handle mood selection
+  const handleUpdateMood = (newMood) => {
+    setMood(newMood);
+    if (onUpdateMood) {
+      onUpdateMood(newMood);
+    }
+    setHasChanges(true);
+  };
+  
+  // Setup auto-save, auto mood update
+  useEffect(() => {
+    if (hasChanges) {
+      // Clear previous auto-save timer
+      if (autoSaveInterval.current) clearTimeout(autoSaveInterval.current);
+      autoSaveInterval.current = setTimeout(() => handleSave(false), AUTOSAVE_DELAY);
+      
+      // Clear previous auto-mood update timer
+      if (moodUpdateInterval.current) clearTimeout(moodUpdateInterval.current);
+      
+      // If we have enough content, auto-detect mood after a delay
+      if (wordCount > 30 && !isUserTyping) {
+        moodUpdateInterval.current = setTimeout(() => {
+          updateMoodFromContent();
+        }, MOOD_UPDATE_DELAY);
+      }
+    }
+    
+    return () => {
+      if (autoSaveInterval.current) clearTimeout(autoSaveInterval.current);
+      if (moodUpdateInterval.current) clearTimeout(moodUpdateInterval.current);
+    };
+  }, [hasChanges, handleSave, wordCount, isUserTyping, updateMoodFromContent]);
+  
+  // Setup suggestion timer
+  useEffect(() => {
+    if (suggestionInterval.current) clearInterval(suggestionInterval.current);
+    
+    // Set up timer to fetch suggestions periodically
+    suggestionInterval.current = setInterval(() => {
+      fetchSuggestions();
+    }, AUTO_SUGGESTION_DELAY);
+    
+    // Initial suggestion fetch if we have content
+    if (content && typeof content === 'string' && content.trim().length > 20) {
+      fetchSuggestions();
+    }
+    
+    return () => {
+      if (suggestionInterval.current) clearInterval(suggestionInterval.current);
+    };
+  }, [content, fetchSuggestions]);
+  
+  return (
+    <Box sx={{ mt: 2 }}>
+      {/* Error message */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {/* Editor header */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 2,
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 2, sm: 0 }
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h6" component="h2">
+            {dayjs(date).format('dddd, MMMM D, YYYY')}
+          </Typography>
+          
+          <MoodDisplay 
+            mood={mood} 
+            updating={moodDetecting}
+            tooltipText="Current mood"
+          />
+        </Box>
+        
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Get writing suggestions">
+            <Button
+              variant="outlined"
+              color="secondary"
+              size="small"
+              startIcon={
+                loadingSuggestions 
+                ? <CircularProgress size={16} color="inherit" /> 
+                : <LightbulbOutlinedIcon />
+              }
+              onClick={() => setSuggestionsOpen(true)}
+              disabled={loadingSuggestions || !content || typeof content !== 'string' || content.trim().length < 10}
+            >
+              Suggestions
+            </Button>
+          </Tooltip>
+          
+          <Tooltip title="Detect mood from text">
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={
+                moodDetecting 
+                ? <CircularProgress size={16} color="inherit" /> 
+                : <AutorenewIcon />
+              }
+              onClick={updateMoodFromContent}
+              disabled={moodDetecting || !content || typeof content !== 'string' || content.trim().length < 20}
+            >
+              Update Mood
+            </Button>
+          </Tooltip>
+        </Box>
+      </Box>
+      
+      {/* Writing suggestions display */}
+      {suggestionsOpen && (
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 2,
+            borderRadius: 2,
+            background: alpha(theme.palette.secondary.light, 0.1),
+            border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Writing Suggestions
+            </Typography>
+            <IconButton size="small" onClick={() => setSuggestionsOpen(false)}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          
+          {loadingSuggestions ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : suggestions.length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {suggestions.map((suggestion, idx) => (
+                <Button
+                  key={idx}
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleSelectSuggestion(suggestion)}
+                  sx={{ 
+                    borderRadius: 4, 
+                    textTransform: 'none',
+                    borderColor: alpha(theme.palette.secondary.main, 0.3),
+                    '&:hover': {
+                      borderColor: theme.palette.secondary.main,
+                      backgroundColor: alpha(theme.palette.secondary.main, 0.1)
+                    }
+                  }}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary" sx={{ py: 1 }}>
+              Write a few more sentences to get suggestions...
+            </Typography>
+          )}
+        </Paper>
+      )}
+      
+      {/* Main text editor */}
+      <Paper
+        elevation={2}
+        sx={{
+          p: 0,
+          borderRadius: 2,
+          overflow: 'hidden',
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+        }}
+      >
+        <TextField
+          multiline
+          fullWidth
+          placeholder="Write your thoughts here..."
+          minRows={15}
+          maxRows={30}
+          value={typeof content === 'string' ? content : ''}
+          onChange={handleContentChange}
+          variant="outlined"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              padding: 2,
+              fontSize: '1rem',
+              lineHeight: 1.6,
+              backgroundColor: theme.palette.background.paper,
+              '& fieldset': {
+                border: 'none'
+              },
+            }
+          }}
+          // No special key handling - simple text editor
+        />
+      </Paper>
+      
+      {/* Footer */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mt: 2 
+      }}>
+        <Typography variant="body2" color="text.secondary">
+          {wordCount} words
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {onClose && (
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          )}
+          
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+            onClick={() => handleSave(true)}
+            disabled={isSaving}
+          >
+            Save
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default SimpleJournalEditor;

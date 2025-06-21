@@ -1,17 +1,7 @@
 // models/JournalEntry.js
 import mongoose from 'mongoose';
 
-// Define the schema for Lexical editor content
-// Lexical stores content as a JSON structure
-const LexicalContentSchema = new mongoose.Schema({
-  // The complete Lexical editor state as a JSON string
-  editorState: {
-    type: String, // JSON stringified Lexical editor state
-    default: '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}'
-  }
-}, { _id: false });
-
-// Define tags schema for categorizing journal entries
+// Define the schema for tags for categorizing journal entries
 const TagSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -21,7 +11,7 @@ const TagSchema = new mongoose.Schema({
     type: String,
     default: '#3f51b5',
   }
-});
+}, { _id: false });
 
 // Define the journal entry schema
 const JournalEntrySchema = new mongoose.Schema(
@@ -32,12 +22,11 @@ const JournalEntrySchema = new mongoose.Schema(
       required: true,
       index: true
     },
-    // Optional title for the entry
-    title: { 
+    // Simple text content for the entry
+    content: { 
       type: String, 
       default: '' 
-    },    // Lexical editor content
-    content: LexicalContentSchema,
+    },
     // Mood/emotion tracking (1-10 scale or specific emotion)
     mood: {
       score: {
@@ -49,6 +38,14 @@ const JournalEntrySchema = new mongoose.Schema(
       label: {
         type: String,
         default: 'neutral'
+      },
+      aiDetected: {
+        type: Boolean,
+        default: false
+      },
+      lastAnalyzed: {
+        type: Date,
+        default: null
       }
     },
     // Tags for categorization

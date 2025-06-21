@@ -68,35 +68,7 @@ const JournalQuote = () => {
   
   return (
     <Box 
-      className={styles.quoteContainer}
-      sx={{
-        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.15)} 100%)`,
-        backgroundSize: '200% 200%',
-        animation: 'gradientBg 15s ease infinite',
-        borderRadius: '16px',
-        padding: '28px 32px',
-        position: 'relative',
-        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.08)}`,
-        border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-        marginBottom: '40px',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: `0 12px 48px ${alpha(theme.palette.primary.main, 0.12)}`,
-        },
-        overflow: 'hidden',
-        '@keyframes gradientBg': {
-          '0%': {
-            backgroundPosition: '0% 50%'
-          },
-          '50%': {
-            backgroundPosition: '100% 50%'
-          },
-          '100%': {
-            backgroundPosition: '0% 50%'
-          },
-        }
-      }}
+ sx={{padding: '2rem 2rem'}}
     >
       <Box
         sx={{
@@ -107,7 +79,7 @@ const JournalQuote = () => {
           lineHeight: 1,
           opacity: 0.08,
           color: theme.palette.primary.main,
-          fontFamily: '"Georgia", serif'
+          fontFamily: '"Georgia", serif',
         }}
       >
         "
