@@ -58,22 +58,27 @@ const handler = async (req, res) => {
           return sum + (todo.score || getDifficultyScore(todo.difficulty));
         }, 0);
       }
+        const todayPossible = totalPossibleScore > 0 ? totalPossibleScore : 100; // Default to 100 if no todos
       
-      const todayPossible = totalPossibleScore > 0 ? totalPossibleScore : 100; // Default to 100 if no todos
-      
-      // Calculate improvement percentage (this could be enhanced with historical data)
-      const improvementRatio = todayPossible > 0 
-        ? (todayScore ) / 100
-        : 0;
+      // Calculate improvement percentage (total score divided by 100 per the formula)
+      const improvementRatio = config.totalScore / 100;
         
+      // Get daily scores data
+      const scoresByDay = Object.entries(config.scoresByDay || {}).map(([date, data]) => ({
+        date,
+        score: data.score || 0,
+        totalPossible: data.totalPossible || 0
+      })).sort((a, b) => a.date.localeCompare(b.date));
+      
       return res.status(200).json({ 
-        totalScore: config.totalScore || todayScore,
+        totalScore: config.totalScore || 0,
         totalPossibleScore: config.totalPossibleScore || todayPossible,
-        improvement: improvementRatio.toFixed(1),
+        improvement: improvementRatio.toFixed(3),
         todayScore: todayScore,
         todayPossibleScore: todayPossible,
         scoreRatio: ((todayScore / Math.max(todayPossible, 1)) * 100).toFixed(1),
-        completionPercentage: ((todayScore / Math.max(todayPossible, 1)) * 100).toFixed(0)
+        completionPercentage: ((todayScore / Math.max(todayPossible, 1)) * 100).toFixed(0),
+        dailyScores: scoresByDay
       });
     } catch (error) {
       console.error('Error fetching score data:', error);

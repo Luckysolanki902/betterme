@@ -12,6 +12,7 @@ import {
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import Layout from '@/components/Layout';
 import EmptyState from '@/components/EmptyState';
 import ProgressTabs from '@/components/ProgressTabs';
@@ -20,6 +21,7 @@ import ProgressCard from '@/components/ProgressCard';
 import ProgressInsight from '@/components/ProgressInsight';
 import CategoriesChart from '@/components/CategoriesChart';
 import ProgressTrend from '@/components/ProgressTrend';
+import DailyScoreGraph from '@/components/DailyScoreGraph';
 import { useStreak } from '@/contexts/StreakContext';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -34,7 +36,9 @@ const Progress = () => {
   const [categories, setCategories] = useState([]);
   const [progressData, setProgressData] = useState(null);
   const [trendData, setTrendData] = useState([]);
+  const [dailyScoreData, setDailyScoreData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isScoreLoading, setIsScoreLoading] = useState(true);
   const [hasData, setHasData] = useState(true);
   const [totalScore, setTotalScore] = useState({ improvement: 0, totalScore: 0, totalPossibleScore: 0 });
   const { currentStreak, longestStreak, dayCount } = useStreak();
@@ -86,7 +90,6 @@ const Progress = () => {
 
     fetchTotalScore();
   }, []);
-
   // Fetch progress data when period or category changes
   useEffect(() => {
     const fetchProgressData = async () => {
@@ -116,6 +119,25 @@ const Progress = () => {
 
     fetchProgressData();
   }, [currentPeriod, selectedCategory]);
+  
+  // Fetch daily scores data
+  useEffect(() => {
+    const fetchDailyScoresData = async () => {
+      setIsScoreLoading(true);
+      
+      try {
+        const scoresRes = await fetch(`/api/progress/daily-scores?period=${currentPeriod}`);
+        const scoresData = await scoresRes.json();
+        setDailyScoreData(scoresData);
+      } catch (error) {
+        console.error('Error fetching daily scores:', error);
+      } finally {
+        setIsScoreLoading(false);
+      }
+    };
+
+    fetchDailyScoresData();
+  }, [currentPeriod]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -124,21 +146,49 @@ const Progress = () => {
   const handleCategoryChange = (event) => {
     setSelectedCategory(event.target.value);
   };
-
   const renderProgressContent = () => {
     if (isLoading) {
       return (
         <Grid container spacing={3}>
-          {[1, 2, 3, 4].map((item) => (
-            <Grid item xs={12} md={6} key={item}>
+          {/* Hero Section Skeleton */}
+          <Grid item xs={12}>
+            <Skeleton 
+              variant="rounded" 
+              width="100%" 
+              height={200} 
+              sx={{ borderRadius: 3 }} 
+            />
+          </Grid>
+          
+          {/* Card Skeletons */}
+          {[1, 2, 3].map((item) => (
+            <Grid item xs={12} sm={6} md={4} key={`card-${item}`}>
               <Skeleton 
                 variant="rounded" 
                 width="100%" 
-                height={300} 
+                height={160} 
                 sx={{ borderRadius: 3 }} 
               />
             </Grid>
           ))}
+          
+          {/* Chart Skeletons */}
+          <Grid item xs={12}>
+            <Skeleton 
+              variant="rounded" 
+              width="100%" 
+              height={400} 
+              sx={{ borderRadius: 3 }} 
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Skeleton 
+              variant="rounded" 
+              width="100%" 
+              height={450} 
+              sx={{ borderRadius: 3 }} 
+            />
+          </Grid>
         </Grid>
       );
     }
@@ -214,7 +264,7 @@ const Progress = () => {
                 textShadow: '0 4px 20px rgba(0,0,0,0.3)',
               }}
             >
-              {parseFloat(totalScore.improvement || 0).toFixed(1)}%
+              {parseFloat(totalScore.improvement || 0).toFixed(2)}%
             </Typography>
             
             <Typography
@@ -289,17 +339,31 @@ const Progress = () => {
             }
             animationDelay={0.3}
           />
-        </Grid>
-
-
-
-        {/* Progress Trend - Full Width on Mobile */}
+        </Grid>        {/* Progress Trend - Full Width on Mobile */}
         <Grid item xs={12}>
           <ProgressTrend 
             data={trendData} 
             period={currentPeriod} 
             animationDelay={0.6}
           />
+        </Grid>
+        
+        {/* Daily Score Graph */}
+        <Grid item xs={12}>
+          {isScoreLoading ? (
+            <Skeleton 
+              variant="rounded" 
+              width="100%" 
+              height={450} 
+              sx={{ borderRadius: 3 }} 
+            />
+          ) : (
+            <DailyScoreGraph 
+              data={dailyScoreData} 
+              period={currentPeriod} 
+              animationDelay={0.8}
+            />
+          )}
         </Grid>
       </Grid>
     );

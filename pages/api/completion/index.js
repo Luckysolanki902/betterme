@@ -87,6 +87,37 @@ const handler = async (req, res) => {
       // Save the updated daily completion record
       await dailyCompletion.save();
       
+      // Update Config with daily score data
+      let config = await Config.findOne({ userId });
+      if (!config) {
+        config = new Config({
+          userId,
+          totalScore: 0,
+          totalPossibleScore: 0,
+          startDate: new Date(),
+          scoresByDay: {}
+        });
+      }
+      
+      // Update total score by recalculating from all daily completions
+      const allDailyCompletions = await DailyCompletion.find({ userId });
+      const totalScore = allDailyCompletions.reduce((sum, completion) => sum + (completion.score || 0), 0);
+      
+      // Update config
+      config.totalScore = totalScore;
+      config.totalPossibleScore = totalPossibleScore;
+      
+      // Update scoresByDay map
+      const scoresByDay = config.scoresByDay || {};
+      scoresByDay[formattedDate] = {
+        score: dailyCompletion.score,
+        totalPossible: dailyCompletion.totalPossibleScore
+      };
+      config.scoresByDay = scoresByDay;
+      
+      // Save the config
+      await config.save();
+      
       // Get the completion status for each todo (to return to client)
       const allCompletionStatus = await getAllTodosCompletionStatus(userId, dateObj);
       
