@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 const BugReportSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['bug', 'feature'],
+    enum: ['bug', 'feedback'],
     required: true,
+    default: 'bug'
   },
   title: {
     type: String,
@@ -15,36 +16,6 @@ const BugReportSchema = new mongoose.Schema({
     type: String,
     required: true,
     maxlength: 2000,
-  },
-  stepsToReproduce: {
-    type: String,
-    maxlength: 1000,
-  },
-  expectedBehavior: {
-    type: String,
-    maxlength: 500,
-  },
-  actualBehavior: {
-    type: String,
-    maxlength: 500,
-  },
-  severity: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'critical'],
-    default: 'medium',
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium',
-  },
-  browser: {
-    type: String,
-    maxlength: 100,
-  },
-  os: {
-    type: String,
-    maxlength: 100,
   },
   email: {
     type: String,

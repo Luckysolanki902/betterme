@@ -179,7 +179,7 @@ const Home = () => {
     } finally {
       setIsLoadingCompletions(false);
     }
-  }; const handleTodoToggle = async (todoId) => {
+  };  const handleTodoToggle = async (todoId) => {
     if (!todoId) {
       console.error('No todoId provided to toggle');
       return;
@@ -190,6 +190,9 @@ const Home = () => {
     const isCurrentlyComplete = completedTodos.includes(todoId);
 
     try {
+      // Set loading state while we're updating
+      setIsLoadingCompletions(true);
+
       // Optimistic update
       if (isCurrentlyComplete) {
         setCompletedTodos(prev => prev.filter(id => id !== todoId));
@@ -212,13 +215,12 @@ const Home = () => {
         throw new Error(`Failed to toggle completion: ${res.status} ${res.statusText}`);
       }
 
-      const data = await res.json();
-
-      if (data.success) {
+      const data = await res.json();      if (data.success) {
         // Update completed todos with server response
         setCompletedTodos(data.completedTodos || []);
-
-        // Update score data
+        
+        // Update score data and refresh total score data to ensure it's accurate
+        // This ensures the "x out of n" task completion indicator is updated
         setScoreData(prev => ({
           ...prev,
           todayScore: data.score || 0,
@@ -227,10 +229,15 @@ const Home = () => {
             ? Math.round((data.score / data.totalPossibleScore) * 100)
             : 0
         }));
+        
+        // Refresh the total score data to ensure UI is updated
+        fetchTotalScore();
+        
+        // Make sure we refresh the todos list to get accurate completion state
+        fetchTodos();
 
         // Update streak
-        updateStreak();
-      } else {
+        updateStreak();      } else {
         // Revert optimistic update if server request failed
         setCompletedTodos(originalCompletedState);
       }
@@ -238,6 +245,9 @@ const Home = () => {
       console.error('Error toggling todo completion:', error);
       // Revert optimistic update on error
       setCompletedTodos(originalCompletedState);
+    } finally {
+      // Always reset loading state
+      setIsLoadingCompletions(false);
     }
   };
 
@@ -604,13 +614,11 @@ const Home = () => {
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Today's Completion
-                </Typography>
-                <Typography variant="h4" component="div" fontWeight="700" sx={{ mb: 1 }}>
+                </Typography>                <Typography variant="h4" component="div" fontWeight="700" sx={{ mb: 1 }}>
                   {calculateCompletionPercentage()}%
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {console.log({ todos })}
-                  {todos?.filter(todo => todo?.completed).length} of {todos.length} tasks done
+                  {completedTodos?.length || 0} of {todos.length} tasks done
                 </Typography>
               </CardContent>
             </Card>

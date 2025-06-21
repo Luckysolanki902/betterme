@@ -29,23 +29,37 @@ const handler = async (req, res) => {
       // Use provided date or default to today
       const dateObj = date ? parseISO(date) : new Date();
       const formattedDate = format(dateObj, 'yyyy-MM-dd');
-      const dayStart = startOfDay(dateObj);
+      const dayStart = startOfDay(dateObj);      // Find or create the daily completion record for this date
+      // Use findOneAndUpdate with upsert to prevent duplicate key errors
+      // We need to be precise with date filtering to avoid timezone issues
+      const startOfDayISO = dayStart.toISOString();
+      const endOfDay = new Date(dayStart);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endOfDayISO = endOfDay.toISOString();
       
-      // Find or create the daily completion record for this date
-      let dailyCompletion = await DailyCompletion.findOne({ 
-        userId,
-        date: { $gte: dayStart, $lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) }
-      });
-      
-      if (!dailyCompletion) {
-        dailyCompletion = new DailyCompletion({ 
+      let dailyCompletion = await DailyCompletion.findOneAndUpdate(
+        { 
           userId,
-          date: dayStart, 
-          completedTodos: [],
-          score: 0,
-          totalPossibleScore: 0
-        });
-      }
+          date: { $gte: new Date(startOfDayISO), $lte: new Date(endOfDayISO) }
+        },
+        // If no document exists, this will be the document to create
+        {
+          $setOnInsert: {
+            userId,
+            date: dayStart,
+            completedTodos: [],
+            score: 0,
+            totalPossibleScore: 0
+          }
+        },
+        // Options
+        {
+          new: true, // Return the updated document
+          upsert: true, // Create if it doesn't exist
+          runValidators: true, // Validate the new document
+          setDefaultsOnInsert: true // Apply schema defaults for new documents
+        }
+      );
 
       // Find the todo and verify it belongs to the user
       const todo = await Todo.findOne({ _id: todoId, userId });

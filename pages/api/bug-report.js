@@ -2,14 +2,14 @@ import connectToMongo from '../../middleware/connectToMongo';
 import BugReport from '../../models/BugReport';
 import nodemailer from 'nodemailer';
 
-// Email configuration
-const transporter = nodemailer.createTransporter({
-  service: 'gmail',
-  auth: {
-    user: process.env.NOTIFICATION_EMAIL_USER,
-    pass: process.env.NOTIFICATION_EMAIL_PASS,
-  },
-});
+// Email configuration (commented out until properly configured)
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.NOTIFICATION_EMAIL_USER,
+//     pass: process.env.NOTIFICATION_EMAIL_PASS,
+//   },
+// });
 
 async function sendNotificationEmail(bugReport) {
   const emailSubject = `New ${bugReport.type === 'bug' ? 'Bug Report' : 'Feature Request'}: ${bugReport.title}`;

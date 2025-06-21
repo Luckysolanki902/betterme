@@ -27,11 +27,11 @@ import TimelineRoundedIcon from '@mui/icons-material/TimelineRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import BookRoundedIcon from '@mui/icons-material/BookRounded';
-import BugReportIcon from '@mui/icons-material/BugReport';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { alpha } from '@mui/system';
-import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import PageTransition from './PageTransition';
 
 const drawerWidth = 270;
 
@@ -104,7 +104,6 @@ const navItems = [
   { text: 'Planner', icon: <EditRoundedIcon />, path: '/planner' },
   { text: 'Journal', icon: <BookRoundedIcon />, path: '/journal' },
   { text: 'Progress', icon: <TimelineRoundedIcon />, path: '/progress' },
-  { text: 'Bug Report', icon: <BugReportIcon />, path: '/bug-report' },
   { text: 'Settings', icon: <SettingsRoundedIcon />, path: '/settings' }
 ];
 
@@ -250,10 +249,23 @@ export default function Layout({ children }) {
             </SignUpButton>
           </Box>
         </SignedOut>
-        
-        <SignedIn>
+          <SignedIn>
           <Box sx={{ mt: 2, px: 1, display: 'flex', justifyContent: 'center' }}>
-            <UserButton />
+            <Button
+              fullWidth
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                borderWidth: 2,
+                '&:hover': { borderWidth: 2 }
+              }}
+              onClick={() => navigateTo('/settings')}
+              startIcon={<SettingsRoundedIcon />}
+            >
+              Account Settings
+            </Button>
           </Box>
         </SignedIn>
       </List>
@@ -383,15 +395,7 @@ export default function Layout({ children }) {
                   </SignUpButton>
                 </Box>
               </SignedOut>
-              
-              <SignedIn>
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-8 h-8"
-                    }
-                  }}
-                />
+                <SignedIn>
               </SignedIn>
             </Box>
           )}
@@ -429,7 +433,9 @@ export default function Layout({ children }) {
         }}
       >
         <Container maxWidth="xl" sx={{ px: { xs: 0.5, sm: 2, md: 3 } }}>
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </Container>
       </Box>
     </Box>
