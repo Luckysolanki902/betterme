@@ -84,13 +84,6 @@ const Home = () => {
   // Combined loading state for UI
   const showTodosLoading = isLoadingTodos || isLoadingCompletions;
 
-  // Redirect to welcome page if not authenticated
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push('/welcome');
-    }
-  }, [isLoaded, isSignedIn, router]);
-
   // Fetch data when user is authenticated
   useEffect(() => {
     if (isSignedIn) {
@@ -101,7 +94,7 @@ const Home = () => {
   }, [isSignedIn]);
 
   // Only render if user is authenticated
-  if (!isLoaded || !isSignedIn) {
+  if (!isLoaded) {
     return (
       <Box sx={{
         display: 'flex',

@@ -1,9 +1,24 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
 const isPublicRoute = createRouteMatcher(['/welcome', '/bug-report', '/api/webhooks(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect()
+  if (!isPublicRoute(req)) {
+    const { userId } = await auth()
+    
+    // If user is not authenticated and trying to access a protected route
+    if (!userId) {
+      // For API routes, return 401 instead of redirecting
+      if (req.nextUrl.pathname.startsWith('/api')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      // For regular pages, redirect to welcome page
+      const welcomeUrl = new URL('/welcome', req.url)
+      return NextResponse.redirect(welcomeUrl)
+    }
+  }
 })
 
 export const config = {
