@@ -73,16 +73,14 @@ const Home = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
-  const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);  const [quote, setQuote] = useState('');
+  const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);
+  const [quote, setQuote] = useState('');
   const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true); // Default to true since we have Clerk auth
   const startDate = useStartDate();
   const { dayCount, updateStreak } = useStreak();  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // Combined loading state for UI
-  const showTodosLoading = isLoadingTodos || isLoadingCompletions;
 
   // Fetch data when user is authenticated
   useEffect(() => {
@@ -106,8 +104,8 @@ const Home = () => {
       </Box>
     );
   }
-  const fetchTodos = async () => {
-    setIsLoadingTodos(true);
+  const fetchTodos = async (silent = false) => {
+    if (!silent) setIsLoadingTodos(true);
     try {
       const res = await fetch('/api/todos');
       if (!res.ok) {
@@ -115,13 +113,12 @@ const Home = () => {
       }
       const data = await res.json();
       setTodos(Array.isArray(data) ? data : []);
-      fetchCompletions();
+      if (!silent) fetchCompletions();
     } catch (error) {
       console.error('Error fetching todos:', error);
       setTodos([]); // Set empty array on error
-      // You could set an error state here if you want to show an error message
     } finally {
-      setIsLoadingTodos(false);
+      if (!silent) setIsLoadingTodos(false);
     }
   };
 
@@ -183,10 +180,7 @@ const Home = () => {
     const isCurrentlyComplete = completedTodos.includes(todoId);
 
     try {
-      // Set loading state while we're updating
-      setIsLoadingCompletions(true);
-
-      // Optimistic update
+      // Optimistic update - no loading state to keep it smooth
       if (isCurrentlyComplete) {
         setCompletedTodos(prev => prev.filter(id => id !== todoId));
       } else {
@@ -208,12 +202,13 @@ const Home = () => {
         throw new Error(`Failed to toggle completion: ${res.status} ${res.statusText}`);
       }
 
-      const data = await res.json();      if (data.success) {
+      const data = await res.json();
+
+      if (data.success) {
         // Update completed todos with server response
         setCompletedTodos(data.completedTodos || []);
         
-        // Update score data and refresh total score data to ensure it's accurate
-        // This ensures the "x out of n" task completion indicator is updated
+        // Update score data
         setScoreData(prev => ({
           ...prev,
           todayScore: data.score || 0,
@@ -223,14 +218,12 @@ const Home = () => {
             : 0
         }));
         
-        // Refresh the total score data to ensure UI is updated
+        // Refresh the total score data in the background
         fetchTotalScore();
-        
-        // Make sure we refresh the todos list to get accurate completion state
-        fetchTodos();
 
         // Update streak
-        updateStreak();      } else {
+        updateStreak();
+      } else {
         // Revert optimistic update if server request failed
         setCompletedTodos(originalCompletedState);
       }
@@ -238,9 +231,6 @@ const Home = () => {
       console.error('Error toggling todo completion:', error);
       // Revert optimistic update on error
       setCompletedTodos(originalCompletedState);
-    } finally {
-      // Always reset loading state
-      setIsLoadingCompletions(false);
     }
   };
 
@@ -257,8 +247,11 @@ const Home = () => {
 
   const handleCloseModifyDialog = () => {
     setModifyDialogOpen(false);
-    // Refresh todos after dialog closes
-    fetchTodos();
+  };
+
+  const handleTodoUpdate = () => {
+    // Refresh todos and score data when todos are updated (silent mode to prevent loading state)
+    fetchTodos(true);
     fetchTotalScore();
   };
 
@@ -545,7 +538,7 @@ const Home = () => {
             borderRadius: '16px',
             overflow: 'visible',
           }}        >
-          {showTodosLoading ? (
+          {isLoadingTodos ? (
             <LoadingState type="todos" message="Loading your tasks..." count={3} />
           ) : todos.length > 0 ? (
             <Todos
@@ -766,6 +759,8 @@ const Home = () => {
             open={modifyDialogOpen}
             onClose={handleCloseModifyDialog}
             todos={todos}
+            onTodoUpdate={handleTodoUpdate}
+            onTodoDelete={handleTodoUpdate}
           />
         </Dialog>
       </Container>
