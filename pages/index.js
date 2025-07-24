@@ -24,6 +24,7 @@ import {
 import { differenceInDays, format } from 'date-fns';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
@@ -74,6 +75,7 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingTodos, setIsLoadingTodos] = useState(true);
   const [isLoadingCompletions, setIsLoadingCompletions] = useState(true);
+  const [authError, setAuthError] = useState(null);
   const [quote, setQuote] = useState('');
   const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(true); // Default to true since we have Clerk auth
@@ -84,12 +86,34 @@ const Home = () => {
 
   // Fetch data when user is authenticated
   useEffect(() => {
-    if (isSignedIn) {
+    if (isSignedIn && user?.id) {
+      console.log('User signed in, fetching data for user:', user.id);
       fetchTodos();
       fetchTotalScore();
       setRandomQuote();
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, user?.id]);
+
+  // Add error recovery mechanism
+  useEffect(() => {
+    if (isSignedIn && user?.id && todos.length === 0 && !isLoadingTodos && !authError) {
+      console.log('No todos found but not loading and no auth error, attempting recovery fetch...');
+      const timer = setTimeout(() => {
+        fetchTodos();
+      }, 2000); // Wait a bit longer
+      return () => clearTimeout(timer);
+    }
+  }, [isSignedIn, user?.id, todos.length, isLoadingTodos, authError]);
+
+  // Monitor for authentication state changes
+  useEffect(() => {
+    console.log('Auth state change:', { 
+      isLoaded, 
+      isSignedIn, 
+      userId: user?.id?.substring(0, 8) + '...',
+      todosCount: todos.length 
+    });
+  }, [isLoaded, isSignedIn, user?.id, todos.length]);
 
   // Only render if user is authenticated
   if (!isLoaded) {
@@ -106,20 +130,55 @@ const Home = () => {
   }
   const fetchTodos = async (silent = false) => {
     if (!silent) setIsLoadingTodos(true);
-    try {
-      const res = await fetch('/api/todos');
-      if (!res.ok) {
-        throw new Error(`Failed to fetch todos: ${res.status} ${res.statusText}`);
+    
+    const maxRetries = 2; // Reduced retries since we have better backend
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`Fetching todos (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        const res = await fetch('/api/todos', {
+          headers: {
+            // Use cache for faster loads, but allow force refresh when needed
+            'Cache-Control': silent ? 'max-age=3600' : 'no-cache',
+          }
+        });
+        
+        if (res.status === 401) {
+          setAuthError('Authentication failed. Please try refreshing the page.');
+          console.error('Authentication error - user not properly authenticated');
+          break;
+        }
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch todos: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log('Todos fetched successfully:', data?.length || 0, 'todos');
+        
+        setTodos(Array.isArray(data) ? data : []);
+        setAuthError(null); // Clear any previous auth errors
+        if (!silent) fetchCompletions();
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        console.error(`Error fetching todos (attempt ${retryCount + 1}):`, error);
+        retryCount++;
+        
+        if (retryCount >= maxRetries) {
+          console.error('Max retries reached, setting empty todos array');
+          setTodos([]); // Set empty array on final failure
+          setAuthError(`Failed to load todos after ${maxRetries} attempts: ${error.message}`);
+        } else {
+          // Shorter wait time since backend is optimized
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        }
       }
-      const data = await res.json();
-      setTodos(Array.isArray(data) ? data : []);
-      if (!silent) fetchCompletions();
-    } catch (error) {
-      console.error('Error fetching todos:', error);
-      setTodos([]); // Set empty array on error
-    } finally {
-      if (!silent) setIsLoadingTodos(false);
     }
+    
+    if (!silent) setIsLoadingTodos(false);
   };
 
   const fetchTotalScore = async () => {
@@ -151,24 +210,50 @@ const Home = () => {
     }
   }; const fetchCompletions = async () => {
     setIsLoadingCompletions(true);
-    try {
-      const res = await fetch(`/api/completion`);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch completions: ${res.status} ${res.statusText}`);
-      }
-      const data = await res.json();
+    
+    const maxRetries = 2; // Reduced retries
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`Fetching completions (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        const res = await fetch(`/api/completion`, {
+          headers: {
+            // Cache completion status for better performance
+            'Cache-Control': 'max-age=300', // 5 minutes cache
+          }
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to fetch completions: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log('Completions fetched successfully:', data);
 
-      if (data.success && data.completedTodos) {
-        setCompletedTodos(data.completedTodos);
-      } else {
-        setCompletedTodos([]);
+        if (data.success && data.completedTodos) {
+          setCompletedTodos(data.completedTodos);
+        } else {
+          setCompletedTodos([]);
+        }
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        console.error(`Error fetching completions (attempt ${retryCount + 1}):`, error);
+        retryCount++;
+        
+        if (retryCount >= maxRetries) {
+          console.error('Max retries reached, setting empty completions array');
+          setCompletedTodos([]);
+        } else {
+          // Shorter wait time
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        }
       }
-    } catch (error) {
-      console.error('Error fetching completions:', error);
-      setCompletedTodos([]);
-    } finally {
-      setIsLoadingCompletions(false);
     }
+    
+    setIsLoadingCompletions(false);
   };  const handleTodoToggle = async (todoId) => {
     if (!todoId) {
       console.error('No todoId provided to toggle');
@@ -253,6 +338,32 @@ const Home = () => {
     // Refresh todos and score data when todos are updated (silent mode to prevent loading state)
     fetchTodos(true);
     fetchTotalScore();
+  };
+
+  const handleForceRefresh = async () => {
+    console.log('Force refresh triggered by user');
+    setIsLoadingTodos(true);
+    setIsLoadingCompletions(true);
+    
+    try {
+      // First, get debug info
+      const debugRes = await fetch('/api/debug/user-state');
+      if (debugRes.ok) {
+        const debugData = await debugRes.json();
+        console.log('Debug data:', debugData);
+      }
+      
+      // Force refresh all data with cache busting
+      await Promise.all([
+        fetchTodos(false),
+        fetchTotalScore(),
+        fetchCompletions()
+      ]);
+      
+      console.log('Force refresh completed');
+    } catch (error) {
+      console.error('Force refresh failed:', error);
+    }
   };
 
   const calculateCompletionPercentage = () => {
@@ -419,6 +530,38 @@ const Home = () => {
           mx: 'auto'
         }}
       >
+        {/* Error Banner */}
+        {authError && (
+          <Box
+            component={motion.div}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            sx={{
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              background: alpha(theme.palette.error.main, 0.1),
+              border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Typography variant="body2" color="error">
+              ⚠️ {authError}
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={handleForceRefresh}
+              sx={{ ml: 2 }}
+            >
+              Retry
+            </Button>
+          </Box>
+        )}
+
         {/* Header with gradient accent and score */}        {/* Compact header with action buttons */}        <Box
           component={motion.div}
           initial={{ y: -20, opacity: 0 }}
@@ -524,6 +667,35 @@ const Home = () => {
             >
               {isMobile ? 'Modify' : 'Modify Tasks'}
             </Button>
+
+            {/* Debug/Refresh Button - Only show in development or when todos are missing */}
+            {(process.env.NODE_ENV === 'development' || todos.length === 0) && (
+              <IconButton
+                onClick={handleForceRefresh}
+                disabled={isLoadingTodos}
+                sx={{
+                  background: alpha(theme.palette.warning.main, 0.1),
+                  border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                  '&:hover': {
+                    background: alpha(theme.palette.warning.main, 0.2),
+                  }
+                }}
+                title="Force refresh todos"
+              >
+                <RefreshIcon 
+                  sx={{ 
+                    color: theme.palette.warning.main,
+                    ...(isLoadingTodos && {
+                      animation: 'spin 1s linear infinite',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(360deg)' }
+                      }
+                    })
+                  }} 
+                />
+              </IconButton>
+            )}
           </Box>
         </Box>
 
@@ -547,13 +719,33 @@ const Home = () => {
               onTodoToggle={handleTodoToggle}
             />
           ) : (
-            <EmptyState
-              title="Ready to be productive?"
-              description="Add your first task to start building better habits and tracking your daily progress"
-              actionText="Create Your First Task"
-              onAction={handleOpenModifyDialog}
-              showStats={true}
-            />
+            <Box>
+              <EmptyState
+                title="Ready to be productive?"
+                description="Add your first task to start building better habits and tracking your daily progress"
+                actionText="Create Your First Task"
+                onAction={handleOpenModifyDialog}
+                showStats={true}
+              />
+              
+              {/* Debug info when no todos are found */}
+              {process.env.NODE_ENV === 'development' && (
+                <Paper
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    background: alpha(theme.palette.warning.main, 0.05),
+                    border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`
+                  }}
+                >
+                  <Typography variant="caption" color="warning.main">
+                    DEBUG: No todos found. User: {user?.id?.substring(0, 8)}... | 
+                    Loaded: {isLoaded ? 'Yes' : 'No'} | 
+                    Signed In: {isSignedIn ? 'Yes' : 'No'}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
           )}
         </Box>
 

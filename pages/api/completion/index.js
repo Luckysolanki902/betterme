@@ -7,6 +7,63 @@ import { getUserId } from '@/middleware/clerkAuth';
 import { decryptArray, decryptFields, ENCRYPTED_FIELDS } from '@/utils/encryption';
 import { format, startOfDay, parseISO } from 'date-fns';
 
+// Cache for completion status - shorter TTL since this changes more frequently
+export const revalidate = 3600; // 1 hour
+
+// Completion cache system
+class CompletionCache {
+  constructor() {
+    this.cache = new Map();
+    this.TTL = 60 * 60 * 1000; // 1 hour for completion status
+  }
+
+  getKey(userId, date = null) {
+    const dateStr = date ? format(parseISO(date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+    return `completion-${userId}-${dateStr}`;
+  }
+
+  get(userId, date = null) {
+    const key = this.getKey(userId, date);
+    const cached = this.cache.get(key);
+    
+    if (cached && Date.now() - cached.timestamp < this.TTL) {
+      console.log('Cache hit for completion:', userId.substring(0, 8));
+      return cached.data;
+    }
+    
+    if (cached) {
+      this.cache.delete(key);
+    }
+    return null;
+  }
+
+  set(userId, data, date = null) {
+    const key = this.getKey(userId, date);
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+    console.log('Cached completion for user:', userId.substring(0, 8));
+  }
+
+  invalidate(userId, date = null) {
+    if (date) {
+      const key = this.getKey(userId, date);
+      this.cache.delete(key);
+    } else {
+      // Invalidate all completion cache for user
+      for (const key of this.cache.keys()) {
+        if (key.includes(`completion-${userId}`)) {
+          this.cache.delete(key);
+        }
+      }
+    }
+    console.log('Invalidated completion cache for user:', userId.substring(0, 8));
+  }
+}
+
+const completionCache = new CompletionCache();
+
 /**
  * API handler for marking todos as complete/incomplete
  * This endpoint maintains the DailyCompletion records that are used
@@ -17,14 +74,19 @@ const handler = async (req, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
+        console.error('No userId found in completion endpoint');
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
+      console.log(`Processing completion request for user: ${userId}`);
       const { todoId, date } = req.body;
       
       if (!todoId) {
+        console.error('No todoId provided in completion request');
         return res.status(400).json({ error: 'Todo ID is required' });
       }
+      
+      console.log(`Processing todo: ${todoId}, date: ${date || 'today'}`);
       
       // Use provided date or default to today
       const dateObj = date ? parseISO(date) : new Date();
@@ -132,17 +194,25 @@ const handler = async (req, res) => {
       // Save the config
       await config.save();
       
+      // Invalidate completion cache since status changed
+      completionCache.invalidate(userId, date);
+      
       // Get the completion status for each todo (to return to client)
       const allCompletionStatus = await getAllTodosCompletionStatus(userId, dateObj);
       
-      return res.status(200).json({
+      // Cache the new completion status
+      const responseData = {
         success: true,
         completedTodos: dailyCompletion.completedTodos,
         score: dailyCompletion.score,
         totalPossibleScore: dailyCompletion.totalPossibleScore,
         date: formattedDate,
         allCompletionStatus
-      });
+      };
+      
+      completionCache.set(userId, responseData, date);
+      
+      return res.status(200).json(responseData);
     } catch (error) {
       console.error('Error updating completion status:', error);
       return res.status(500).json({ error: 'Failed to update completion status' });
@@ -151,24 +221,43 @@ const handler = async (req, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
+        console.error('No userId found in completion GET endpoint');
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
       const { date } = req.query;
       const dateObj = date ? parseISO(date) : new Date();
       
+      // Check cache first
+      const cachedCompletion = completionCache.get(userId, date);
+      if (cachedCompletion) {
+        return res.status(200).json(cachedCompletion);
+      }
+
+      console.log(`Fetching completion status for user: ${userId}`);
+      console.log(`Date for completion check: ${format(dateObj, 'yyyy-MM-dd')}`);
+      
       // Get the completion status for all todos
       const allCompletionStatus = await getAllTodosCompletionStatus(userId, dateObj);
+      console.log(`Found completion status for ${allCompletionStatus?.length || 0} todos`);
       
-      return res.status(200).json({
+      const completedTodos = allCompletionStatus?.filter(todo => todo.completed).map(todo => todo._id) || [];
+      console.log(`${completedTodos.length} todos are completed`);
+      
+      const responseData = {
         success: true,
-        completedTodos: allCompletionStatus.filter(todo => todo.completed).map(todo => todo._id),
+        completedTodos,
         allCompletionStatus,
         date: format(dateObj, 'yyyy-MM-dd')
-      });
+      };
+      
+      // Cache the result
+      completionCache.set(userId, responseData, date);
+      
+      return res.status(200).json(responseData);
     } catch (error) {
       console.error('Error fetching completion status:', error);
-      return res.status(500).json({ error: 'Failed to fetch completion status' });
+      return res.status(500).json({ error: 'Failed to fetch completion status', details: error.message });
     }
   } else {
     return res.status(405).json({ error: 'Method not allowed' });

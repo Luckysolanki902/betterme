@@ -9,6 +9,14 @@ const SALT_LENGTH = 32; // 256 bits
 const ITERATIONS = 100000; // PBKDF2 iterations
 
 /**
+ * Check if encryption is available
+ * @returns {boolean} - Whether encryption can be used
+ */
+function isEncryptionAvailable() {
+  return !!process.env.JWT_SECRET_KEY;
+}
+
+/**
  * Derives an encryption key from the JWT secret and optional salt
  * @param {string} salt - Optional salt for key derivation
  * @returns {Buffer} - Derived key
@@ -16,7 +24,9 @@ const ITERATIONS = 100000; // PBKDF2 iterations
 function deriveKey(salt = '') {
   const secret = process.env.JWT_SECRET_KEY;
   if (!secret) {
-    throw new Error('JWT_SECRET_KEY is not configured');
+    console.warn('JWT_SECRET_KEY environment variable is not configured - encryption disabled');
+    // Return a dummy key for development (not secure)
+    return Buffer.alloc(KEY_LENGTH, 0);
   }
   
   const saltBuffer = Buffer.from(salt || 'default-salt', 'utf8');
@@ -30,6 +40,11 @@ function deriveKey(salt = '') {
  * @returns {string} - Encrypted data as base64 string
  */
 function encryptData(data, userId = '') {
+  // If encryption is not available, return data as-is
+  if (!isEncryptionAvailable()) {
+    return typeof data === 'string' ? data : JSON.stringify(data);
+  }
+
   try {
     // Convert data to string if it's an object
     const plaintext = typeof data === 'string' ? data : JSON.stringify(data);
@@ -54,7 +69,8 @@ function encryptData(data, userId = '') {
     return Buffer.from(result).toString('base64');
   } catch (error) {
     console.error('Encryption error:', error);
-    throw new Error('Failed to encrypt data');
+    // Return unencrypted data as fallback
+    return typeof data === 'string' ? data : JSON.stringify(data);
   }
 }
     
@@ -88,6 +104,11 @@ function sanitizeForLogging(data) {
  * @returns {string|object} - Decrypted data
  */
 function decryptData(encryptedData, userId = '') {
+  // If encryption is not available, return data as-is
+  if (!isEncryptionAvailable()) {
+    return encryptedData;
+  }
+
   try {
     // Handle null, undefined, or non-string values
     if (!encryptedData || typeof encryptedData !== 'string') {
@@ -349,6 +370,7 @@ const ENCRYPTED_FIELDS = {
 
 // Export all functions and constants
 module.exports = {
+  isEncryptionAvailable,
   encryptData,
   decryptData,
   encryptFields,
